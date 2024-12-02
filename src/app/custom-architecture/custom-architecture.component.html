@@ -1,0 +1,20 @@
+<div class="Architecture_Store">
+    <button
+        class="Architecture_Options"
+        *ngFor = "let Option of Architecture_Options"
+        (click) = "AppendArchitecture(Option)"
+        [ngStyle]="{left:CalculateLeft(Architecture_Options.indexOf(Option))}"
+    >{{Option}}</button>
+</div>
+<div class="Architecture_Builder">
+    <div class="Architecture_Card" *ngFor = "let Entry of Architecture">
+        <h2 class="Architecture_Card_Label">{{Entry.ID}}</h2>
+        <h3 class="Parameter_Input_Label" *ngFor = "let Arg of Entry.Args">{{Arg.ID}}</h3>
+        <input
+            *ngFor = "let Arg of Entry.Args"
+            class="Parameter_Input"
+            (input) = "HandleLayerArgs(Architecture.indexOf(Arg),Arg.ID,$event.target.Value)"
+        >{{Arg.Value}}</input>
+    </div>
+</div>
+<!--Variable list and hyperparameters input here--> 

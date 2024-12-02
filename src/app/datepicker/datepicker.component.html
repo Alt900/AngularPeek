@@ -1,0 +1,15 @@
+<div class="DownloadControls">
+    <mat-form-field appearance="fill" style="background-color:var(--primary_color);color:var(--secondary_color);width:80%;">
+        <mat-label>Start date:</mat-label>
+        <input matInput [matDatepicker]="StartDate" [(ngModel)]="SelectedStartDate"/>
+        <mat-datepicker-toggle matIconSuffix [for]="StartDate"/>
+        <mat-datepicker #StartDate/>
+    </mat-form-field>
+    <br/>
+    <mat-form-field appearance="fill" style="width:80%">
+        <mat-label>End date:</mat-label>
+        <input matInput [matDatepicker]="EndDate" [(ngModel)]="SelectedEndDate"/>
+        <mat-datepicker-toggle matIconSuffix [for]="EndDate"/>
+        <mat-datepicker #EndDate/>
+    </mat-form-field>
+</div>

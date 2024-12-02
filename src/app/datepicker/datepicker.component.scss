@@ -1,0 +1,9 @@
+@use "../Variables.scss";
+.DownloadControls{
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20%;
+    width: 100%;
+    border: 2px solid var(--primary_color);
+}

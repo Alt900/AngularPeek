@@ -1,0 +1,14 @@
+<div class="InterfaceControls">
+    <br/>
+    <app-datepicker/>
+    <div class="IntervalField">
+        <mat-form-field style="width:80%">
+            <mat-label>Interval:{{SelectedInterval}}</mat-label>
+            <mat-select [(ngModel)]="SelectedInterval">
+                @for(option of IntervalOptions; track option){
+                    <mat-option [value]="option.value">{{option.label}}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+    </div>
+</div>

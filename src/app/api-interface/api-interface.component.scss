@@ -1,0 +1,21 @@
+@use '../Variables.scss';
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+.InterfaceControls{
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 10%;
+    height: 100%;
+    background-color: var(--primary_color);
+    border: 2px solid var(--secondary_color);
+}
+
+.IntervalField{
+    position: absolute;
+    left: 0;
+    top: 16%;
+    height: 50%;
+    width: 100%;
+    color: var(--secondary_color);
+    background-color: var(--primary_color);
+}

@@ -1,0 +1,121 @@
+@use '../Variables.scss';
+
+.variables{
+    --primary_color: rgba(255,51,255,1);
+    --secondary_color: rgba(0,0,0,1);
+};
+
+.DashboardOptions{
+    position: absolute;
+    left: 0;
+    top: 0;
+    border: 2px solid var(--secondary_color);
+    background-color: var(--primary_color);
+    width: 10%;
+    height: 100%;
+    overflow-y: scroll;
+}
+
+.PrimaryColorLabel{
+    position: absolute;
+    left: 25%;
+    top: 4%;
+    font-size: 15px;
+    color: var(--secondary_color);
+}
+
+.ShowPrimary{
+    @extend .Border_BackgroundColor_Color;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20%;
+    height: 10%;
+}
+
+.ShowPrimary:hover{
+    @extend .Inverse_Border_BackgroundColor_Color;
+}
+
+.SecondaryColorLabel{
+    position: absolute;
+    left: 25%;
+    top: 14%;
+    font-size: 15px;
+    color: var(--secondary_color);
+}
+
+.ShowSecondary{
+    position: absolute;
+    left: 0;
+    top: 10%;
+    width: 20%;
+    height: 10%;
+    border: 2px solid var(--secondary_color);
+    color: var(--secondary_color);
+    background-color: var(--primary_color);
+}
+
+.ShowSecondary:hover{
+    @extend .Inverse_Border_BackgroundColor_Color;
+}
+
+.PrimaryColorContainer{
+    position: absolute;
+    right: 0;
+    top: 10%;
+    width: 50%;
+    height: 20%;
+    background-color: transparent;
+    z-index: 1;
+}
+
+.SecondaryColorContainer{
+    position: absolute;
+    right: 0;
+    top: 5%;
+    width: 50%;
+    height: 20%;
+    background-color: transparent;
+    z-index: 1;
+}
+
+.ChangeColorButton{
+    position: absolute;
+    top: 20%;
+    left: 0;
+    width: 100%;
+    height: 5%;
+    @extend .Border_BackgroundColor_Color;
+}
+
+.ChangeColorButton:hover{@extend .Inverse_Border_BackgroundColor_Color;}
+
+.DashboardLabelContainer{
+    position: absolute;
+    @extend .BackgroundColor_Color;
+    border: 2px dotted var(--secondary_color);
+    top: 25%;
+    left: -2%;
+    width: 100%;
+    height: 10%;
+}
+
+.DashoptionsLabel{
+    position: absolute;
+    @extend .BackgroundColor_Color;
+    font-size: 15px;
+    top: 50%;
+    left: 5%;
+}
+
+.DasboardOptionButton{
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 10%;
+    border: 2px solid var(--secondary_color);
+    background-color: var(--primary_color);
+    color: var(--secondary_color);
+    z-index: 1;
+}

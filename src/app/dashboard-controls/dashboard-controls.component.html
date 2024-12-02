@@ -1,0 +1,21 @@
+<div class="DashboardOptions"> 
+    <h5 class="PrimaryColorLabel">Primary color</h5>
+    <button class="ShowPrimary" (click)="ToggleColorSelect(true)">></button>
+    <h5 class="SecondaryColorLabel">Secondary color</h5>
+    <button class="ShowSecondary"(click)="ToggleColorSelect(false)">></button>
+
+    <button
+        class="ChangeColorButton"
+        (click) = "ChangeSCSS()"
+    >Change colors</button>
+    <div class="DashboardLabelContainer">
+        <h3 class="DashoptionsLabel">Dashboard options:</h3>
+    </div>
+    <button
+        class="DasboardOptionButton"
+        *ngFor = "let Option of Selections"
+        [ngStyle]="{top:CalculateTop(Selections.indexOf(Option))}"
+        (click) = "HandleDashboardOption(Option)"
+    >{{Option.replaceAll("_"," ")}}
+    </button>
+</div>
