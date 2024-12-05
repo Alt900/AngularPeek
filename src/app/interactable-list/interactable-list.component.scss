@@ -1,0 +1,21 @@
+
+:root{
+    --primary_color: black;
+    --secondary_color: white;
+}
+
+.VariablesContainer{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 50%;
+    border: 2px solid var(--primary_color);
+    background-color: var(--secondary_color);
+}
+
+.VariableButtons{
+    position: absolute;
+    color: var(--primary_color);
+    background-color: var(--secondary_color);
+}

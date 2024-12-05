@@ -1,0 +1,17 @@
+<div class="VariablesContainer">
+    <button 
+        class="VariableButtons"
+        *ngFor = "let Index of Indicies"
+        (click) = "HandleVariable(Index)"
+        [ngStyle]="{top:CalculateTop(Index)}"
+    >{{Variables[Index]}}
+    </button>
+</div>
+<div>
+    <ul>
+        <li 
+            *ngFor="let bool of VariablesSelected"
+        >{{bool===false?"❌":"✅"}}
+        </li>
+    </ul>
+</div>

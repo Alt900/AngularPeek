@@ -1,0 +1,7 @@
+
+// Custom Theming for Angular Material
+@use '@angular/material' as mat;
+@use "./app/Variables.scss";
+
+html, body { height: 100%; background-color: var(--primary_color);}
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

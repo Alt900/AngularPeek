@@ -1,0 +1,42 @@
+
+<app-candlestick-chart [Data]="Prediction"/>
+<div class="HyperparameterTuning">
+    <div class="TickerField">
+        <mat-form-field style="width:80%">
+            <mat-label>Ticker:{{ChosenTicker}}</mat-label>
+            <mat-select [(ngModel)]="ChosenTicker">
+                @for(option of AvailableTickers; track option){
+                    <mat-option [value]="option">{{option}}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+    </div>
+    <div class="NormalizationMethodField">
+        <mat-form-field style="width:80%">
+            <mat-label>Normalization Method:{{NormalizationMethod}}</mat-label>
+            <mat-select [(ngModel)]="NormalizationMethod">
+                @for(option of NormalizationOptions; track option){
+                    <mat-option [value]="option">{{option}}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+    </div>
+    <button 
+        class="TrainOHLCButton"
+        (click)="TrainModel()"
+    >Train Model</button>
+    <div 
+        class="HyperparameterContainer"
+        *ngFor="let Value of HyperparameterArray,let i=index"
+        [style.top]="CalculateTop(i)"
+    >
+        <h3
+        class="HyperparameterLabel"
+        >{{GetID(i)}}</h3>
+        <input
+            class="HyperparameterInput"
+            (input)="HandleHyperparameters(i,$event)"
+            [value]="Value"
+        />
+    </div>
+</div>

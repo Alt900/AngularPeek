@@ -1,0 +1,19 @@
+.SecondaryColorContainer{
+    position: absolute;
+    left: 10%;
+    top: 5%;
+    width: 50%;
+    height: 20%;
+    background-color: transparent;
+    z-index: 1;
+}
+
+.PrimaryColorContainer{
+    position: absolute;
+    left: 10%;
+    top: 10%;
+    width: 50%;
+    height: 20%;
+    background-color: transparent;
+    z-index: 2;
+}
