@@ -1,59 +1,58 @@
-# AngularPeek
+# Peek a Angular Technical Analysis Tool
+![logo](public/favicon.ico)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.2.
+## What is the goal of this project?
+This project's end-goal is to be a technical analysis tool for stock analysis using machine learning, statistical methods, and experimental quantum finance algorithms to help traders make well-informed decisions on the stock they are looking to buy/sell. This tool will be able to gather, process, and manipulate stock data for tasks ranging from machine learning / linear regression based forecasting to technical indicators and portfolio optimization. Some future functionalities will include:
 
-## Development server
 
-To start a local development server, run:
+- LSTM based forecasting
+- VAE based anomaly detection
+- Statistical measurements like mean, mode, standard deviation, ect
+- Technical indicators like MACD
+- Quantum risk management algorithms like QAOA
+- Quantum/Classic machine learning hybrids like QSVM's
+- Fully interactable charts for candlesticks, individual variable analysis, and technical indicators
 
-```bash
-ng serve
+
+
+
+
+
+## Prerequisites
+Since this project is built out of Python and Angular using Node and Angular's CLI V19, you are going to need `Python 3.1.5` and `Node.js v22.5.1` installed to continue alongside their respective package managers, pip and npm. There are also external dependencies that need to be installed on both sides:
+
+
+### Python:
+#### (Torches actual version is 2.2.2+cu118)
 ```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+pip3 install Torch==2.2.2
+pip3 install statsmodels==0.14.0
+pip3 install numpy==1.24.3
+pip3 install pandas==1.5.3
+pip3 install matplotlib==3.7.1
+pip3 install qiskit==0.45.0
+pip3 install qiskit_algorithms==0.3.0
+pip3 install qiskit_finance==0.4.1
+pip3 install flask==3.0.3
+pip3 install flask_cors==4.0.1
+pip3 install qiskit_aer==0.12.0
+pip3 install pylatexenc==2.10
 ```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
+### Node:
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
+npm install -g @angular/cli@latest
+cd ./AngularPeek
+npm install
 ```
+## How do I launch the application?
+If you are Windows there are two batch files called `StartAPI.bat` and `StartApp.bat`, launch them both and when Angular is ready it will pop a new tab with the application. If you are on Linux or MAC the three commands to start the app are `python API.py` and `ng serve`
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-## Running unit tests
+## Using the API Interface
+This dashboard controls which tickers are downloaded, the date range, and the time interval of the dataset. The only interactable element here is the candlestick chart rendered in the center of the dashboard with X axis scrolling. 
+![Interface](public/APIInterface.png)
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Using Machine Learning
+As of now there is only a LSTM predicting OHLC prices and outputs the resulting OHLC prdiction at the end of the candlestick chart. Hyperparameters can be tuned on the left hand side alongside the ticker's data that will be loaded and passed to the LSTM.
 
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+![OHLCDash](public/OHLCDash.png)
