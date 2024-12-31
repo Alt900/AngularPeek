@@ -25,7 +25,7 @@ def Split(Windows,Labels,ratio):
     window_test, label_test = Windows[train_end:test_end],Labels[train_end:test_end]
     window_validation, label_validation = Windows[test_end:validation_end],Labels[test_end:validation_end]
 
-    return (window_train,label_train),(window_test,label_test),(window_validation,label_validation)
+    return [(window_train,label_train),(window_test,label_test),(window_validation,label_validation)]
 
 class Feature_Engineering():
     def __init__(self,
@@ -53,58 +53,80 @@ class Feature_Engineering():
 
 
 class Customized_Network(torch.nn.Module):
-    def __init__(self,LayerArgs,Layers,Variables):
+    def __init__(self,LayerArgs,Variables,BatchSize):
         self.LayerArgs = LayerArgs
-        self.Layers = Layers
         self.Variables = Variables
-        """
-        "1": lambda Layer : torch.nn.LSTM(
-                len(self.Variables),
-                int(self.LayerArgs[Layer][0]["content"]),
-                1,
-                batch_first=True,
-                bidirectional=True,
-            ),
-        """
+        self.BatchSize = BatchSize
         super().__init__()
         self.Layer_Dispatcher = {
-            "0": lambda Layer : torch.nn.LSTM(
-                len(self.Variables),
-                int(self.LayerArgs[Layer][0]["content"]),
-                1,
+            "LSTM Unidirectional": lambda cellcount,previous : torch.nn.LSTM(
+                input_size=previous,
+                hidden_size=cellcount,
+                num_layers=1,
                 batch_first=True
             ),
-            "1":lambda Layer : torch.nn.Dropout(p=float(self.LayerArgs[Layer][0]["content"])),
-            "2":lambda Layer: torch.nn.Linear(
-                int(self.LayerArgs[Layer][0]["content"]),
-                len(self.Variables)
-            ),
-            "3": lambda _ : torch.nn.Tanh(),
-            "4": lambda _ : torch.nn.ReLU(),
-            "5": lambda _ : torch.nn.LeakyReLU(),
-            "6": lambda _ : torch.nn.Sigmoid()
+            "Dropout":lambda Pval : torch.nn.Dropout(p=Pval),
+            "Dense":lambda cellcount,previous: torch.nn.Linear(
+                in_features=previous,
+                out_features=cellcount
+            )
         }
 
         self.Model_Architecture = []
-        for Layer,N in zip(self.Layers,range(len(self.Layers))):
-            self.Model_Architecture.append(self.Layer_Dispatcher[Layer](N))
-        self.Model = torch.nn.Sequential(*self.Model_Architecture)
 
+        for Layer,Index in zip(self.LayerArgs,range(len(self.LayerArgs))):#dim batch size error
+            if Layer == self.LayerArgs[0] and Layer["layer_type"] == "LSTM Unidirectional":
+                self.Model_Architecture.append(
+                    self.Layer_Dispatcher[Layer["layer_type"]](
+                        Layer["cell_count"],
+                        self.BatchSize
+                    )
+                )
+
+            elif Layer != self.LayerArgs[0] and Layer != self.LayerArgs[-1]:
+                self.Model_Architecture.append(
+                    self.Layer_Dispatcher[Layer["layer_type"]](
+                        Layer["cell_count"],
+                        self.LayerArgs[Index-1]["cell_count"]
+                    )
+                )
+
+            elif Layer == self.LayerArgs[-1]:
+                self.Model_Architecture.append(
+                    self.Layer_Dispatcher[Layer["layer_type"]](
+                        len(self.Variables),
+                        self.LayerArgs[Index-1]["cell_count"]
+                    )
+                )
+
+            if Layer["dropout"]>0.00:
+                self.Model_Architecture.append(
+                    self.Layer_Dispatcher["Dropout"](
+                        Layer["dropout"]
+                    )
+                )
+                
+        self.Model = torch.nn.Sequential(*self.Model_Architecture)
     def forward(self,x):
         out = x
         lstm_states = []
-        for layer in self.Model_Architecture:
-            if isinstance(layer,torch.nn.LSTM):
-                out,h = layer(out)
+        N = len(self.Model_Architecture)
+        if(N>1):
+            for n in range(1,N):
+                if isinstance(self.Model_Architecture[n],torch.nn.LSTM):
+                    out,h = self.Model_Architecture[n](out)
+                    lstm_states.append(h)
+                else:
+                    out = self.Model_Architecture[n](out)
+            return out[:,-1,:],lstm_states
+        else:
+            if isinstance(self.Model_Architecture[n],torch.nn.LSTM):
+                out,h = self.Model_Architecture[0](out)
                 lstm_states.append(h)
-            elif isinstance(layer,torch.nn.Linear):
-                batch_size, seq_length, feature_dim = out.shape
-                out = out.reshape(-1,feature_dim)
-                out = layer(out)
-                out = out.reshape(batch_size,seq_length,-1)
             else:
-                out = layer(out)
-        return out[:,-1,:],lstm_states
+                out = self.Model_Architecture[0](out)
+            return out[:,-1,:],lstm_states
+
     
 class Custom_Network_Model():
     def __init__(self,X,Y,batch_size,epochs,learning_rate,Model):
@@ -123,7 +145,8 @@ class Custom_Network_Model():
         self.TrainingLoader = torch.utils.data.DataLoader(
             torch.utils.data.TensorDataset(self.train_x,self.train_y),
             batch_size=batch_size,
-            shuffle=True
+            shuffle=True,
+            drop_last=True
         )
         self.TestingLoader = torch.utils.data.DataLoader(
             torch.utils.data.TensorDataset(self.test_x,self.test_y),
@@ -196,11 +219,6 @@ class LSTM_Univariate():
 
         self.train_x, self.train_y = torch.from_numpy(X[0]), torch.from_numpy(Y[0])
         self.test_x, self.test_y = torch.from_numpy(X[1]), torch.from_numpy(Y[1])
-
-        print(self.train_x.shape)
-        print(self.train_y.shape)
-        print(self.test_x.shape)
-        print(self.test_y.shape)
 
         self.TrainingLoader = torch.utils.data.DataLoader(
             torch.utils.data.TensorDataset(self.train_x,self.train_y),

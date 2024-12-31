@@ -10,7 +10,7 @@ import { DashboardControlsComponent } from './dashboard-controls/dashboard-contr
 import { CandlestickChartComponent } from './candlestick-chart/candlestick-chart.component';
 import { APIInterfaceComponent } from './api-interface/api-interface.component';
 import { OHLCPredictionComponent } from './ohlc-prediction/ohlc-prediction.component';
-
+import { CustomArchitectureComponent } from './custom-architecture/custom-architecture.component';
 interface DataStructure {
   close:number;
   high:number;
@@ -29,6 +29,7 @@ interface DataStructure {
     CandlestickChartComponent,
     APIInterfaceComponent,
     OHLCPredictionComponent,
+    CustomArchitectureComponent,
     
     ColorSketchModule,
     
@@ -45,7 +46,7 @@ export class AppComponent {
   ChildBooleanPrimary:boolean = false;
   ChildBooleanSecondary:boolean = false;
 
-  ChosenDashboard:string="API Interface";
+  ChosenDashboard:string="Custom Architecture";
 
   HandleInput(payload:any){
     if(payload[1]){

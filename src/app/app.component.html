@@ -16,12 +16,20 @@
     *ngIf="ChosenDashboard==='OHLC prediction'"
 />
 
+<app-custom-architecture
+    [Primary]="Primary_Color"
+    [Secondary]="Secondary_Color"
+    [AvailableTickers]="AvailableTickers"
+    *ngIf="ChosenDashboard==='Custom Architecture'"
+/>
+
 <app-dashboard-controls 
     (DasboardChangeEvent)="HandleDashboardChange($event)"
     (ChildBoolean)="HandleInput($event)"
     [RGBAPrimary]="Primary_Color"
     [RGBASecondary]="Secondary_Color"
 />
+
 <div *ngIf="ChildBooleanPrimary" class="PrimaryColorContainer">
     <color-sketch [color]="Primary_Color" (onChangeComplete)="HandlePrimaryChange($event)"/>
 </div>

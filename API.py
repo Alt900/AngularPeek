@@ -6,8 +6,8 @@ from threading import Event
 from flask import Flask,request, Response
 
 import PyPredict
-from PyPredict import ML,QuantumManager,Statistics,API_Interface,np, filesystem
-
+from PyPredict import ML,QuantumManager,Statistics,API_Interface,np, filesystem, pd
+from datetime import datetime, timedelta
 #CPython
 from CPy_Lib import ReadJSON, CStats, Normalization
 
@@ -15,8 +15,6 @@ app_dir = os.getcwd()
 app=Flask(__name__)
 
 #load whats already downloaded
-# so I don't have to click download on the dash
-#every single time the API reboots
 DH_Object = API_Interface.DataHandler()
 DH_Object.DownloadTickerData(
     DH_Object.OnHand,
@@ -53,6 +51,16 @@ denormalization_dispatcher = {
     "MinMax":Normalization.MinMax_Denorm,
     "Z_Score":Normalization.Z_Score_Denorm
 }
+
+@app.route("/api/SimulateStatus")
+def SimulateStatus():
+    def generate():
+        tempbool=False
+        while True:
+            time.sleep(4)
+            tempbool=not tempbool
+            yield f"data: {tempbool}\n\n".encode('utf-8')
+    return Response(generate(),content_type='text/event-stream')
 
 @app.route("/api/GetTickers")
 def GetTickers():
@@ -138,29 +146,24 @@ def LiveFeedSignal():
         "payload":f"Set live feed signal to {LiveStopSignal}",
         "error":None
     }
-    
 
-@app.route("/CreateModel",methods=['GET'])
-def CreateModel():
-    Hyperparameters = json.loads(request.args.get("Hyperparams"))
+@app.route("/api/CreateModel")
+def ParentCreateModel():
+    Hyperparameters = [int(x) if x.isdigit() else float(x) for x in request.args.get("Hyperparams")[1:-1].split(",")]
     Layer_Arguments = json.loads(request.args.get("LayerArgs"))
     Norm_Method = request.args.get("NormMethod",type=str)
     Ticker = request.args.get("Ticker",type=str)
-    Layers = [x for x in request.args.get("Layers",type=list) if x!=","]
-    BoolVars = [True if x[0]!="f" else False for x in request.args.get("Variables",type=str).split(",")]
-    Vars = ["open","high","low","close","volume"]
-    Variables = []
-    for x in range(5):
-        if BoolVars[x]:
-            Variables.append(Vars[x])
-    Model_Obj = ML.Customized_Network(Layer_Arguments,Layers,Variables)
-
-    TTV = (Hyperparameters[0]["value"],Hyperparameters[1]["value"],Hyperparameters[2]["value"])
-
+    Variables = [str(x) for x in request.args.get("Variables")[1:-1].split(",")]
+    Model_Obj = ML.Customized_Network(Layer_Arguments,Variables,Hyperparameters[0])
     copy = API_Interface.data[Ticker].copy()
-    to_export = json.loads(API_Interface.data[Ticker][Variables].copy().to_json(orient="records"))
     Means,STDs,Min,Max=[],[],[],[]
+    TTV = [Hyperparameters[3],Hyperparameters[4],Hyperparameters[5]]
 
+    to_export = json.loads(API_Interface.data[Ticker][Variables+["timestamp"]].copy().to_json(orient="records"))
+    for x in to_export:
+        x["colorscheme"] = ["green","red","grey"]
+
+    #Normalize organic data before generating synthetic timestamps
     if Norm_Method=="Z_Score":
         for column in Variables:
             listcol = list(copy[column].tolist())
@@ -183,41 +186,57 @@ def CreateModel():
         for column in Variables:
             copy[column] = normalization_dispatcher[Norm_Method](list(copy[column].tolist()))
 
-    MVR = ML.Window(copy,Variables,Hyperparameters[4]["value"])
+    MVR = ML.Window(copy,Variables,Hyperparameters[1])
     MVR = ML.Split(MVR[0],MVR[1],TTV)
 
+    #generate synthetic data points through N timesteps 
+    TimeOrigin = datetime.fromtimestamp(to_export[-1]["timestamp"]/1000)
+    GeneratedTime = [TimeOrigin + timedelta(days=i) for i in range(Hyperparameters[-1])]
+    N = len(copy["timestamp"])
+    for I in range(0,Hyperparameters[-1]):
+        copy.loc[N+I] = [GeneratedTime[I]] + [copy.loc[N-I-1][var] for var in Variables+["timestamp"]]
+    prediction_x,_=ML.Window(copy,Variables,Hyperparameters[1])
+    prediction_x = prediction_x[len(prediction_x)-Hyperparameters[-1]:len(prediction_x)]
+    print(prediction_x)
+    
     train_x, train_y = MVR[0]
     test_x, test_y = MVR[1]
     validation_x, validation_y = MVR[2]
-
-    Model = ML.Custom_Network_Model((train_x,test_x,validation_x),(train_y,test_y,validation_y),Hyperparameters[3]["value"],int(Hyperparameters[6]["value"]),5,Model_Obj)
+    Model = ML.Custom_Network_Model((train_x,test_x,validation_x),(train_y,test_y,validation_y),Hyperparameters[0],int(Hyperparameters[2]),0.1,Model_Obj)
     Model.train()
-    Prediction = Model.predict(validation_x).tolist()
-    DeNormalizedPrediction = []
+    Variables.append("timestamp")
+    from torch import tensor
+    Prediction = Model.predict(prediction_x)
+    DeNormalizedPrediction = {}
+    
     if Norm_Method=="Z_Score":
-        for x,i in zip(Prediction,range(len(Prediction))):
-            DeNormalizedPrediction.append(denormalization_dispatcher[Norm_Method](x,Means[i],STDs[i]))
-    
+        for i,key in zip(range(len(Prediction)),Variables):
+            DeNormalizedPrediction[key]=denormalization_dispatcher[Norm_Method](list(Prediction[i]),Means[i],STDs[i])
+
     elif Norm_Method=="MinMax":
-        for x,i in zip(Prediction,range(len(Prediction))):
-            DeNormalizedPrediction.append(denormalization_dispatcher[Norm_Method](x,Min[i],Max[i]))
-    
+        for i,key in zip(range(len(Prediction)),Variables):
+            DeNormalizedPrediction[key] = denormalization_dispatcher[Norm_Method](Prediction[i],Min[i],Max[i])
+
     else:
-        for x in Prediction:
-            DeNormalizedPrediction.append(denormalization_dispatcher[Norm_Method](x))
+        for key in Variables:
+            DeNormalizedPrediction[key] = denormalization_dispatcher[Norm_Method](Prediction[i])
+
+    DeNormalizedPrediction["timestamp"] = GeneratedTime
+    DeNormalizedPrediction = [dict(zip(DeNormalizedPrediction.keys(), values)) for values in zip(*DeNormalizedPrediction.values())]
+    for x in DeNormalizedPrediction:
+        x["colorscheme"] = ["rgb(52,235,137)","rgb(207,60,87)","grey"]
 
     Payload={
-        "PreData":to_export,
-        "Prediction":DeNormalizedPrediction,
-        "Loss":{"Train_Loss":Model.Train_Loss,"Test_Loss":Model.Test_Loss},
-        "Accuracy": {"Train_Accuracy":Model.Train_Accuracy,"Test_Accuracy":Model.Test_Accuracy}
+        "Prediction":to_export+DeNormalizedPrediction,
+        "Loss":[Model.Train_Loss,Model.Test_Loss],
+        "Accuracy": [Model.Test_Accuracy,Model.Train_Accuracy]
     }
 
     return{
         "payload":Payload,
         "error":None
     }
-
+   
 
 @app.route("/VolatilityScore")
 def PriceVolatility():
@@ -265,6 +284,7 @@ def TrainUniVar():
         Multivariate=False,
         variable_count=None
     )
+    
     LSTM.train()
     predicted = LSTM.predict(Windowed_Data[0][2])
     result = Normalization.DenormLogarithm(predicted)

@@ -27,6 +27,7 @@ class DataHandler():
             end = int(datetime.strptime(end,"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
         for ticker in tickers:
             if ticker not in self.OnHand:
+                self.OnHand.append(ticker)
                 response = session.get(
                     f"{self.HistoricalDataURL}{ticker}?period1={start}&period2={end}&interval={interval}",headers=headers
                 )

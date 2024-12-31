@@ -1,4 +1,4 @@
-# Peek a Angular Technical Analysis Tool
+# Peek a browser-based GUI
 ![logo](public/favicon.ico)
 
 ## What is the goal of this project?
@@ -50,9 +50,24 @@ If you are Windows there are two batch files called `StartAPI.bat` and `StartApp
 
 ## Using the API Interface
 This dashboard controls which tickers are downloaded, the date range, and the time interval of the dataset. The only interactable element here is the candlestick chart rendered in the center of the dashboard with X axis scrolling. 
-![Interface](public/APIInterface.png)
 
-## Using Machine Learning
-As of now there is only a LSTM predicting OHLC prices and outputs the resulting OHLC prdiction at the end of the candlestick chart. Hyperparameters can be tuned on the left hand side alongside the ticker's data that will be loaded and passed to the LSTM.
 
-![OHLCDash](public/OHLCDash.png)
+## Machine Learning
+There are currently two options for machine learning, the first is a prebuilt LSTM for predicting OHLC prices with a pretty simple layout:
+![OHLC](public/ML_OHLC.png)
+Hyperparameters are laid out below the ticker and normalization method dropdown controlling:
+- epochs
+- batch size
+- window size
+- cell count
+- training, testing, and validaton split ratios
+
+The second option is building a model yourself in the Custom Architecture dashboard. This dashboard has the same set of controllable hyperparameters previously mentioned ontop of buttons sequentially adding LSTM or Dense layers to your architecture:
+![CML1](public/CML_1.png)
+When adding layers, the changes will be reflected in the SVG container at the center of the page populating a LSTM or Dense layer. Alongside the SVG a individual layer controller will be added below the Build and train button allowing you to control Dropout, cell count for the individual layer, and to remove the layer from the architecture:
+![CML2](public/CML_2.png)
+<video src="public/CML_3.mp4" controls></video>
+From here you can alter the machine learning network further and experiment with different combinations or build and train the model. The architecture you constructed will be compiled into a PyTorch model and put through training, to tell when the network is training/done training a asynconous animation will play inverting the colors of the architecture in and out while training: 
+<video src="public/CML4.mp4" controls></video>
+When training is complete you can view the prediction, accuracy, or loss plots:
+<video src="public/CML5.mp4" controls></video>

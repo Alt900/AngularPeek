@@ -6,7 +6,7 @@ import {
   AfterViewInit,
   SimpleChanges,
 } from '@angular/core';
-
+import {CandleStick} from '../Charts'
 import * as d3 from 'd3';
 
 interface DataStructure {
@@ -15,7 +15,6 @@ interface DataStructure {
   low:number;
   open:number
   timestamp:string;
-  volume:number; 
   colorscheme?:string;
 }
 
@@ -30,47 +29,12 @@ interface DataStructure {
 export class CandlestickChartComponent implements AfterViewInit{
   Height:number = 0;
   Width:number = 0;
-  MarginTop:number = 20;
-  MarginRight:number = 30;
-  MarginBottom:number = 30;
-  MarginLeft:number = 40;
+  Margins:number[]=[20,30,30,40]
+  sleep:Function = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  ChartSVG!:SVGSVGElement;
+  ChartSVG!:d3.Selection<SVGSVGElement, unknown, null, undefined>;
 
   @Input()Data:DataStructure[]=[];
-
-  private X: d3.ScaleBand<string>;
-  private Y: d3.ScaleLogarithmic<number, number, never>;
-
-  constructor(){
-    this.X = d3.scaleBand();
-    this.Y = d3.scaleLog();
-  }
-
-  ngOnChanges(changes:SimpleChanges):void{
-    if(changes['Data'] && changes['Data'].currentValue.length>0){
-      this.RenderCandleStick();
-    }
-  }
-
-  @ViewChild('SVGContainer', { static: true }) SVGReference!: ElementRef<SVGSVGElement>;
-  @ViewChild('ChartContainer',{static:true}) DivReference!: ElementRef<any>;
-
-  
-
-  ngAfterViewInit(): void {
-    //Fetch calculated H/W from parent div
-    const ParentDiv = this.DivReference.nativeElement;
-    const Rect = ParentDiv.getBoundingClientRect();
-    this.Width = Rect.width;
-    this.Height = Rect.height;
-    //hook D3 to SVG element
-    this.ChartSVG = this.SVGReference.nativeElement;
-    //if the data is already available then render, if not it will have to be rendered by ngonchanges
-    if(this.Data.length>0){
-      this.RenderCandleStick();
-    }
-  }
 
   private DateFormat(d:string):string{
     const DateObj = new Date(d);
@@ -84,79 +48,88 @@ export class CandlestickChartComponent implements AfterViewInit{
     }).replace(',',' :')
   }
 
-  HandleZoom(e:any):void{//triggers on zoom but doesn't apply transformation
-    const {x,k} = e.transform;
-    d3.select(this.SVGReference.nativeElement).attr("transform",`translate(${x},0) scale(${k},1)`)
+  ngOnChanges(changes:SimpleChanges):void{
+    if(changes['Data'] && changes['Data'].currentValue.length>0){
+      const Dates:string[] = this.Data.map(d=>this.DateFormat(d.timestamp));
+      const X:d3.ScaleBand<string> = d3
+        .scaleBand()
+        .domain(Dates)
+        .range([this.Margins[3],this.Width-this.Margins[2]]); 
+  
+      const Y:d3.ScaleLogarithmic<number, number, never> = d3
+        .scaleLog()
+        .domain([d3.min(this.Data,(d:DataStructure)=>d.low),d3.max(this.Data,(d:any)=>d.high)] as [number,number])
+        .rangeRound([this.Height - this.Margins[1], this.Margins[0]]);
+      d3.selectAll("svg > *").remove();
+
+      function HandleZoom(e:any):void{
+        const {x,k} = e.transform;
+        d3.select(e.target).attr("transform",`translate(${x},0) scale(${k},1)`)
+      }
+      
+      this.ChartSVG = d3.select(this.SVGReference.nativeElement)
+        .attr("viewBox",[0,0,this.Width,this.Height])
+        .call(d3.zoom<SVGSVGElement,unknown>().on("zoom",(e:any)=>HandleZoom(e)))
+
+      CandleStick(
+        X,
+        Y,
+        this.Data,
+        this.ChartSVG,
+        this.Height,
+        this.Width,
+        this.Margins,
+        Dates
+      );
+    }
   }
 
-  private RenderCandleStick():void{
-    const Dates = this.Data.map(d=>this.DateFormat(d.timestamp));
-    this.X = d3
-      .scaleBand()
-      .domain(Dates)
-      .range([this.MarginLeft,this.Width-this.MarginRight]); 
+  @ViewChild('ChartContainer',{static:true}) DivReference!: ElementRef<any>;
+  @ViewChild('SVGContainer', { static: true }) SVGReference!: ElementRef<SVGSVGElement>;
+  
+  
 
-    this.Y = d3
-      .scaleLog()
-      .domain([d3.min(this.Data,(d:any)=>d.low),d3.max(this.Data,(d:any)=>d.high)] as [number,number])
-      .rangeRound([this.Height - this.MarginBottom, this.MarginTop]);
-    d3.selectAll("svg > *").remove();
-
-    const SVG = d3.select<SVGSVGElement,unknown>(this.SVGReference.nativeElement)
-      .attr("viewBox",[0,0,this.Width,this.Height])
-      .call(d3.zoom<SVGSVGElement,unknown>().on("zoom",(e:any)=>this.HandleZoom(e)))
-
-
-    const XAxis = (g: d3.Selection<SVGGElement,unknown,null,undefined>)=>
-      g
-        .attr("transform",`translate(0,${this.Height-this.MarginBottom})`)
-        .call(d3.axisBottom(this.X).tickValues(Dates))
-        .selectAll("text")
-        .style("font-size","4px")
-        .attr("dx","-8em")
-        .attr("transform","rotate(-90)")
-        .call((g:any)=>g.select(".domain").remove());
-
-    const YAxis = (g:d3.Selection<SVGGElement,unknown,null,undefined>)=>
-      g
-        .attr("transform",`translate(${this.MarginLeft},0)`)//not this one
-        .call(d3.axisLeft(this.Y))
-        .selectAll("text")
-        .style("font-size","4px")
-        .call((g:any)=>g
-          .selectAll(".tick line")
-          .clone()
-          .attr("stroke-opacity",.2)
-          .attr("x2",this.Width-this.MarginLeft-this.MarginRight)
-        )
-        .call((g:any)=>g.select(".domain").remove());
-    SVG.append("g").call(XAxis);
-    SVG.append("g").call(YAxis);
-
-    const g = SVG.append("g")
-      .attr("stroke-linecap","round")
-      .attr("stroke","black")
-      .selectAll("g")
-      .data(this.Data)
-      .join("g")
-      .attr("transform",((_:any,Index:number)=>`translate(${this.X(Dates[Index])},0)`))//produces all number types
-    g.append("line")
-      .attr("y1",(d:any)=>this.Y(d.low))
-      .attr("y2",(d:any)=>this.Y(d.high));
-
-    g.append("line")
-      .attr("y1",(d:any)=>this.Y(d.open))
-      .attr("y2",(d:any)=>this.Y(d.close))//this.Data[0].colorscheme <T> = string | undefined
-      .attr("stroke-width",this.X.bandwidth()) //[red,gree,grey]
-      .attr("stroke",
-        this.Data[0].colorscheme===undefined?
-          (d:any)=>d.open>d.close ? d3.schemeSet1[0] : d.close > d.open ? d3.schemeSet1[2] : d3.schemeSet1[8]
-          :(d:any)=> d.open>d.close ? d.colorscheme[0] : d.close > d.open ? d.colorscheme[1]: d.colorscheme[2]
-        );
-        
-    const SVGNode = SVG.node();
-    if(SVGNode !== null){
-      this.ChartSVG = SVGNode;
+  async ngAfterViewInit(): Promise<void> {
+    //Fetch calculated H/W from parent div
+    const ParentDiv = this.DivReference.nativeElement;
+    const Rect = ParentDiv.getBoundingClientRect();
+    //hook D3 to SVG element
+    //if the data is already available then render, if not it will have to be rendered by ngonchanges
+   
+    this.Width = Rect.width;
+    this.Height = Rect.height;
+    if(this.Data.length>0){
+      const Dates:string[] = this.Data.map(d=>this.DateFormat(d.timestamp));
+      const X:d3.ScaleBand<string> = d3
+        .scaleBand()
+        .domain(Dates)
+        .range([this.Margins[3],this.Width-this.Margins[2]]); 
+  
+      const Y:d3.ScaleLogarithmic<number, number, never> = d3
+        .scaleLog()
+        .domain([d3.min(this.Data,(d:DataStructure)=>d.low),d3.max(this.Data,(d:any)=>d.high)] as [number,number])
+        .rangeRound([this.Height - this.Margins[0], this.Margins[1]]);
+      d3.selectAll("svg > *").remove();
+      
+      function HandleZoom(e:any):void{
+        const {x,k} = e.transform;
+        d3.select(e.target).attr("transform",`translate(${x},0) scale(${k},1)`)
+      }
+      
+      this.ChartSVG = d3.select(this.SVGReference.nativeElement)
+        .attr("viewBox",[0,0,this.Width,this.Height])
+        .call(d3.zoom<SVGSVGElement,unknown>().on("zoom",(e:any)=>HandleZoom(e)))
+      
+        CandleStick(
+        X,
+        Y,
+        this.Data,
+        this.ChartSVG,
+        this.Height,
+        this.Width,
+        this.Margins,
+        Dates
+      );
     }
   }
 }
