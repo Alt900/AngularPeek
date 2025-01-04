@@ -1,8 +1,16 @@
 <div class="DashboardOptions"> 
     <h5 class="PrimaryColorLabel">Primary color</h5>
-    <button class="ShowPrimary" (click)="ToggleColorSelect(true)">></button>
+    <button
+        class="ShowPrimary"
+        (click)="ToggleColorSelect(true)"
+        [ngClass]="{'ShowPrimaryClicked':ShowPrimary}"
+        >></button>
     <h5 class="SecondaryColorLabel">Secondary color</h5>
-    <button class="ShowSecondary"(click)="ToggleColorSelect(false)">></button>
+    <button
+        class="ShowSecondary"
+        (click)="ToggleColorSelect(false)"
+        [ngClass]="{'ShowSecondaryClicked':ShowSecondary}"
+        >></button>
 
     <button
         class="ChangeColorButton"

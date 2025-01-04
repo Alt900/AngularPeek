@@ -21,14 +21,15 @@ class DataHandler():
         for filename in [x for x in os.walk(DataDirectory)][0][2]:
             self.OnHand.append(filename.split("_")[0])
         
-    def DownloadTickerData(self,tickers,start,end):
+    def DownloadTickerData(self,tickers,start,end,interval):
         if(start != None and end != None):
             start = int(datetime.strptime(start,"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
             end = int(datetime.strptime(end,"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
         for ticker in tickers:
             if ticker not in self.OnHand:
+                self.OnHand.append(ticker)
                 response = session.get(
-                    f"{self.HistoricalDataURL}{ticker}?period1={start}&period2={end}&interval=1d",headers=headers
+                    f"{self.HistoricalDataURL}{ticker}?period1={start}&period2={end}&interval={interval}",headers=headers
                 )
                 if response.status_code == 200:
                     dataresp = response.json()

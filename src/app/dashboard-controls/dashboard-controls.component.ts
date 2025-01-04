@@ -12,16 +12,17 @@ import { CommonModule } from '@angular/common';
 export class DashboardControlsComponent {
   @Output() DasboardChangeEvent = new EventEmitter;
   @Output() ChildBoolean = new EventEmitter<boolean[]>();
-  @Input() RBGAPrimary:string = "rgba(0,0,0,1)";
+  @Input() RGBAPrimary:string = "rgba(0,0,0,1)";
   @Input() RGBASecondary:string = "rgba(0,210,255,1)";
 
   Selections: string[] = [
     "API Interface",
-    "Statistical metrics",
-    "Linear Regression",
     "OHLC prediction",
-    "Custom model architecture",
+    "Custom Architecture"
   ]
+  //"Custom model architecture"
+  //"Linear Regression",
+  //"Statistical metrics"
   ShowPrimary:boolean = false;
   ShowSecondary:boolean = false;
 
@@ -41,7 +42,7 @@ export class DashboardControlsComponent {
   }
   //SCSS color customization handlers
   ChangeSCSS(){
-    document.documentElement.style.setProperty('--primary_color',this.RBGAPrimary);
+    document.documentElement.style.setProperty('--primary_color',this.RGBAPrimary);
     document.documentElement.style.setProperty('--secondary_color',this.RGBASecondary);
   }
   //Dashboard control handler

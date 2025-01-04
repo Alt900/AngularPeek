@@ -7,8 +7,19 @@ import { ColorEvent } from 'ngx-color';
 import { ColorSketchModule } from 'ngx-color/sketch';
 
 import { DashboardControlsComponent } from './dashboard-controls/dashboard-controls.component';
-import { CandlestickChartComponent } from './candlestick-chart/candlestick-chart.component'
+import { CandlestickChartComponent } from './candlestick-chart/candlestick-chart.component';
 import { APIInterfaceComponent } from './api-interface/api-interface.component';
+import { OHLCPredictionComponent } from './ohlc-prediction/ohlc-prediction.component';
+import { CustomArchitectureComponent } from './custom-architecture/custom-architecture.component';
+interface DataStructure {
+  close:number;
+  high:number;
+  low:number;
+  open:number
+  timestamp:string;
+  volume:number; 
+  colorscheme?:string;
+}
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -17,7 +28,11 @@ import { APIInterfaceComponent } from './api-interface/api-interface.component';
     DashboardControlsComponent,
     CandlestickChartComponent,
     APIInterfaceComponent,
+    OHLCPredictionComponent,
+    CustomArchitectureComponent,
+    
     ColorSketchModule,
+    
     CommonModule
   ],
   templateUrl: './app.component.html',
@@ -25,30 +40,44 @@ import { APIInterfaceComponent } from './api-interface/api-interface.component';
 })
 
 export class AppComponent {
-  CandlestickData!:[];
+  CandlestickData!:DataStructure[];
+  AvailableTickers!:string[];
 
   ChildBooleanPrimary:boolean = false;
   ChildBooleanSecondary:boolean = false;
 
+  ChosenDashboard:string="Custom Architecture";
+
   HandleInput(payload:any){
-    console.log(payload);
-    if(payload[0]){
-      this.ChildBooleanPrimary = payload[1];
+    if(payload[1]){
+      this.ChildBooleanPrimary = payload[0];
     } else{
-      this.ChildBooleanSecondary = payload[1];
+      this.ChildBooleanSecondary = payload[0];
     }
+  }
+
+  HandleIncomingData(payload:any){
+    this.CandlestickData = payload as DataStructure[];
+  }
+
+  HandleDashboardChange(payload:any){
+    this.ChosenDashboard=payload as string;
   }
 
   Primary_Color:string = "rgba(0,0,0,1)";
   Secondary_Color:string = "rgba(0,210,255,1)";
 
   ngOnInit():void{
-    const FetchedTickers: Promise<any> = Utils.FetchRoute("GetTickers");
+    Utils.FetchRoute("GetTickers")
+    .then((Result)=>{
+      this.AvailableTickers=Result;//undefined
+      console.log(this.AvailableTickers)
+    })
+
     Utils.FetchRoute("FetchJSON?ticker=LMT")
     .then((Result)=>{
       this.CandlestickData=Result
     })
-    const Tickers:Promise<string[]> = FetchedTickers as Promise<string[]>
     document.documentElement.style.setProperty('--primary_color',this.Primary_Color);
     document.documentElement.style.setProperty('--secondary_color',this.Secondary_Color);
   }

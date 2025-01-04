@@ -1,7 +1,35 @@
 <router-outlet />
-<app-candlestick-chart [Data]="CandlestickData"/>
-<app-api-interface/>
-<app-dashboard-controls (ChildBoolean)="HandleInput($event)"/>
+<!--<app-univariate-chart [UnivariateData]="CandlestickData"/>-->
+<app-api-interface
+    (TickerData)="HandleIncomingData($event)"
+    [OnHandTickers]="AvailableTickers"
+    *ngIf="ChosenDashboard==='API Interface'"
+/>
+<app-candlestick-chart
+    [Data]="CandlestickData"
+    *ngIf="ChosenDashboard==='API Interface'"
+/>
+
+<app-ohlc-prediction 
+    [TickerData]="CandlestickData"
+    [AvailableTickers]="AvailableTickers"
+    *ngIf="ChosenDashboard==='OHLC prediction'"
+/>
+
+<app-custom-architecture
+    [Primary]="Primary_Color"
+    [Secondary]="Secondary_Color"
+    [AvailableTickers]="AvailableTickers"
+    *ngIf="ChosenDashboard==='Custom Architecture'"
+/>
+
+<app-dashboard-controls 
+    (DasboardChangeEvent)="HandleDashboardChange($event)"
+    (ChildBoolean)="HandleInput($event)"
+    [RGBAPrimary]="Primary_Color"
+    [RGBASecondary]="Secondary_Color"
+/>
+
 <div *ngIf="ChildBooleanPrimary" class="PrimaryColorContainer">
     <color-sketch [color]="Primary_Color" (onChangeComplete)="HandlePrimaryChange($event)"/>
 </div>
