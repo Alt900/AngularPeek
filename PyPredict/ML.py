@@ -1,13 +1,4 @@
-from . import torch,np,pd
-import statsmodels
-
-device = (
-    "cuda"#NVIDIA GPU
-    if torch.cuda.is_available()
-    else "mps"#AMD GPU
-    if torch.backends.mps.is_available()
-    else "cpu"
-)
+from . import torch,np
     
 def Window(df,Variables,window_size=5):
     Windowed_Set, Labels = [], []
@@ -26,30 +17,6 @@ def Split(Windows,Labels,ratio):
     window_validation, label_validation = Windows[test_end:validation_end],Labels[test_end:validation_end]
 
     return [(window_train,label_train),(window_test,label_test),(window_validation,label_validation)]
-
-class Feature_Engineering():
-    def __init__(self,
-        time_series:pd.DataFrame,
-        min:float,
-        max:float
-        ):
-        self.torched_series=torch.Tensor(time_series)
-        self.time_series=time_series
-        self.min = min
-        self.max = max
-
-    def seasonal_decompose(self,period=5):
-        return statsmodels.tsa.seasonal.seasonal_decompose(self.time_series,model="additive",period=period)
-
-    def standard_clip(self):
-        return torch.clamp(self.torched_series,self.min,self.max)
-    
-    def MAD(self,threshold):
-        median = np.median(self.time_series)
-        mad = np.median(abs(self.time_series-median))
-        lower_cut = median-threshold*mad
-        upper_cut = median+threshold*mad
-        return torch.clamp(torch.Tensor(self.time_series),min=lower_cut,max=upper_cut)
 
 
 class Customized_Network(torch.nn.Module):
@@ -191,69 +158,6 @@ class Custom_Network_Model():
         predicted,_ = self.Model(torch.tensor(x))
         predicted = predicted.detach().numpy().transpose()
         return predicted
-    
-class LSTM_Univariate_Model(torch.nn.Module):
-    def __init__(self,cell_count,layers):
-        super().__init__()
-        self.layers=layers
-        self.cell_count=cell_count
-        self.LSTM=(torch.nn.LSTM(1,cell_count,layers,batch_first=True))
-        self.dropout=torch.nn.Dropout(p=0.5)
-        self.linear=torch.nn.Linear(cell_count,4)
-    def forward(self,x):
-        batch_size = x.shape[0]
-        hidden_state_1 = torch.zeros(self.layers, batch_size, self.cell_count, dtype=torch.float32)
-        cell_state_1 = torch.zeros(self.layers, batch_size, self.cell_count, dtype=torch.float32)
-
-        hidden_state_1, cell_state_1 = self.LSTM(x,(hidden_state_1,cell_state_1))
-        hidden_state_1 = self.dropout(hidden_state_1)
-        return self.linear(hidden_state_1)
-    
-class LSTM_Univariate():
-    def __init__(self,X,Y,cell_count,layers,batch_size,epochs):
-        self.epochs = epochs
-
-        self.model = LSTM_Univariate_Model(cell_count,layers)
-        self.optimizer = torch.optim.Adam(self.model.parameters())
-        self.LossFunction = torch.nn.MSELoss()
-
-        self.train_x, self.train_y = torch.from_numpy(X[0]), torch.from_numpy(Y[0])
-        self.test_x, self.test_y = torch.from_numpy(X[1]), torch.from_numpy(Y[1])
-
-        self.TrainingLoader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(self.train_x,self.train_y),
-            batch_size=batch_size,
-            shuffle=True
-        )
-
-    def train(self):
-        for epoch in range(self.epochs):
-            for X_train, Y_train in self.TrainingLoader:
-                self.model.train()
-                y_predicted = self.model(X_train)
-                loss=self.LossFunction(y_predicted, Y_train)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-            print(f"epoch - {epoch}\nRMSE loss: {loss}")
-
-            if epoch%100!=0:
-                continue
-
-            self.model.eval()
-
-            with torch.no_grad():
-                y_predicted = self.model(torch.tensor(self.train_x))
-                train_rmse=(torch.sqrt(self.LossFunction(y_predicted,self.train_y)))
-                y_predicted=self.model(self.test_x)
-                test_rmse=(torch.sqrt(self.LossFunction(y_predicted,self.test_y)))
-
-            print(f"epoch - {epoch}\nTrain RMSE: {train_rmse}\nTest RMSE: {test_rmse}")
-            
-    def predict(self,x):
-        predicted=self.model(torch.tensor(x))
-        return predicted.flatten().tolist()
 
 
 class LSTM_OHLC_Multivariate_Model(torch.nn.Module):
@@ -323,4 +227,3 @@ class LSTM_OHLC_Multivariate():
     def predict(self,x):
         predicted=self.model(torch.tensor(x))
         return predicted.tolist()
-

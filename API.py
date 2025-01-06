@@ -1,12 +1,10 @@
 
 import os
 import json
-import time
 from threading import Event
 from flask import Flask,request, Response
 
-import PyPredict
-from PyPredict import ML,QuantumManager,Statistics,API_Interface,np, filesystem, pd
+from PyPredict import ML,API_Interface,np, filesystem
 from datetime import datetime, timedelta
 #CPython
 from CPy_Lib import ReadJSON, CStats, Normalization
@@ -51,16 +49,6 @@ denormalization_dispatcher = {
     "MinMax":Normalization.MinMax_Denorm,
     "Z_Score":Normalization.Z_Score_Denorm
 }
-
-@app.route("/api/SimulateStatus")
-def SimulateStatus():
-    def generate():
-        tempbool=False
-        while True:
-            time.sleep(4)
-            tempbool=not tempbool
-            yield f"data: {tempbool}\n\n".encode('utf-8')
-    return Response(generate(),content_type='text/event-stream')
 
 @app.route("/api/GetTickers")
 def GetTickers():
@@ -110,24 +98,12 @@ def FetchJSON():
         "error":None
     }
 
-@app.route("/MovementAverage",methods=['GET'])
-def MovementAverage():
-    df = API_Interface.data["FOXO"]
-    DMP = (df["high"]-df["low"])/df["open"]*100
-    AMP = round(DMP.mean(),2)
-    return{
-        "payload": f"Average movement price: {AMP}%",
-        "error": None
-    }
-
 @app.route("/LiveStockFeed")
 def LiveStockFeed():
     Ticker = request.args.get("ticker",type=str)
     def Stream():
         while not LiveStopSignal.is_set():
-            time.sleep(10)
             Data = DH_Object.GetCurrentPrice(Ticker)
-            print(Data)
             yield {
                 "payload": Data,
                 "error": None
@@ -238,62 +214,6 @@ def ParentCreateModel():
         "payload":Payload,
         "error":None
     }
-   
-
-@app.route("/VolatilityScore")
-def PriceVolatility():
-    ticker = "NVDA"
-    variable = "high"
-    df = API_Interface.data[ticker]
-    RT = []
-    N = len(df[variable])
-    for t in range(1,N):
-        RT.append(((df[variable][t]-df[variable][t-1])/df[variable][t-1])*100)
-    R=sum(RT)/N
-    STD = np.sqrt(sum([(x-R)**2 for x in RT])/N-1)*np.sqrt(252)
-    return{
-        "payload":f"{ticker} {variable} price volatility score {round(STD)}%",
-        "error":None
-    }
-
-@app.route("/Train_Univar",methods=['GET'])
-def TrainUniVar():
-
-    method = request.args.get("NormMethod",type=str)
-    ticker = request.args.get("ticker",type=str)
-    #variable = request.args.get("variable",type=str)
-    method = normalization_dispatcher[method]
-    Normalized = method(list(API_Interface.data[ticker]["open"]))
-
-    Splitter = ML.LSTM_Prep(
-        ratio=PyPredict.args["Train-Test-Validation-Split"],
-        time_shift=PyPredict.args["Time_Shift"],
-        label_size=PyPredict.args["Label_Size"]
-    )
-
-    Split_Data = Splitter.split(Normalized)
-
-    Windowed_Data = Splitter.window(Split_Data)
-
-    LSTM = ML.Univariate_LSTM(
-        X=Windowed_Data[0],
-        Y=Windowed_Data[1],
-        cell_count=PyPredict.args["Cell_Count"],
-        output_size=PyPredict.args["LSTM_Output_Size"],
-        layers=PyPredict.args["Layers"],
-        filename=f"{PyPredict.args['Targeted_Ticker']}_univariate.pt",
-        MTO=True if PyPredict.args["LSTM_Output_Size"]==1 else False,
-        Multivariate=False,
-        variable_count=None
-    )
-    
-    LSTM.train()
-    predicted = LSTM.predict(Windowed_Data[0][2])
-    result = Normalization.DenormLogarithm(predicted)
-    return {
-        "payload": result,
-        "error": None
-    }
 
 @app.route("/api/OHLC_Multivariate")
 def TestMVWindow():
@@ -401,176 +321,5 @@ def TestMVWindow():
         "payload": CopiedMarshalled+PredictionData,
         "error": None
     }
-    
-
-@app.route("/Run_QASM",methods=['GET'])
-def Run_QASM():
-    results = QuantumManager.RunCircuit(
-        None,
-        True,
-        True,
-        request.args.get("Script")
-    )
-    return{
-        "payload": results,
-        "error": None
-    }
-
-@app.route("/Grovers",methods=['GET'])
-def Grovers():
-    qubits=request.args.get("qubits",type=int)
-    algo=QuantumManager.Grovers_Algorithm(qubits)
-    results = algo.Call()
-    return{
-        "payload":results,
-        "error":None
-    }
-
-@app.route("/QAE",methods=['GET'])
-def QAE():
-    qubits = request.args.get("qubits",type=int)
-    typeof_qae = request.args.get("typeof",type=str)
-    probability = request.args.get('probability',type=float)
-    algo = QuantumManager.QAE(qubits)
-    print(algo.Qubits)
-    results = algo.Call(probability,typeof_qae)
-    return {
-        "payload": results,
-        "error": None
-    }
-
-@app.route("/FIP",methods=['GET'])
-def FIP():
-    high = eval(request.args.get("high"))
-    low = eval(request.args.get("low"))
-    cf = eval(request.args.get("cf"))
-    epsilon=request.args.get("epsilon",type=float)
-    alpha=request.args.get("alpha",type=float)
-    algo = QuantumManager.Fixed_Income_Pricing(low,high,cf,epsilon,alpha)
-    results=algo.Call()
-    return{
-        "payload":results,
-        "error":None
-    }
-
-@app.route("/Run_ARIMA",methods=['GET'])
-def Run_ARIMA():
-    order = eval(request.args.get("order"))
-    seasonal_order = eval(request.args.get("seasonal_order",type=str))
-    trend = request.args.get("trend")
-    enforce_stationarity = request.args.get("enforce_stationarity",type=bool)
-    enforce_invertibility = request.args.get("enforce_invertibility",type=bool)
-    concentrate_scale = request.args.get("concentrate_scale",type=bool)
-    trend_offset = request.args.get("trend_offset",type=int)
-    validate_specification = request.args.get("validate_specification",type=bool)
-    missing = request.args.get("missing")
-    frequency = request.args.get("frequency")
-    ticker = request.args.get("ticker",type=str)#add dropdown
-    dependent_variable=request.args.get("dependent",type=str)#add dropdown
-    independent_variable = request.args.get("independent",type=str)#add dropdown
-    independent_set = API_Interface.data[ticker][independent_variable]
-    dependent_set = API_Interface.data[ticker][dependent_variable]
-
-
-    obj = Statistics.Regression_Models(dependent_set,independent_set)
-    result = obj.ARIMA(
-        order,
-        seasonal_order,
-        trend,
-        enforce_stationarity,
-        enforce_invertibility,
-        concentrate_scale,
-        trend_offset,
-        validate_specification,
-        missing,
-        frequency
-    )
-
-    return {
-        "payload": "\n\n"+str(result.summary()),
-        "error": None
-    }
-
-@app.route("/Run_Theta",methods=['GET'])
-def Run_Theta():
-    period=request.args.get("period",type=str)
-    deseasonalize=request.args.get("deseasonalize",type=bool)
-    toforecast = request.args.get("toforecast",type=int)#add to react
-    use_test=request.args.get("use_test",type=bool)
-    method=request.args.get("method",type=str)
-    difference=request.args.get("difference",type=bool)
-    ticker = request.args.get("ticker",type=str)#add dropdown
-    dependent = request.args.get("dependent",type=str)
-    independent = request.args.get("independent",type=str)
-
-    dependent_set = API_Interface.data[ticker][dependent]
-    independent_set = API_Interface.data[ticker][independent]
-
-    obj = Statistics.Regression_Models(dependent_set,independent_set)
-
-    result = obj.Theta(
-        period=period if period=="None" else int(period),
-        future_steps=toforecast,
-        deseasonalize=deseasonalize,
-        use_test=use_test,
-        method=method,
-        difference=difference
-        )
-
-    return {
-        "payload": "\n\n"+str(result.summary()),
-        "error": None
-    }
-
-@app.route("/Run_OLS",methods=['GET'])
-def Run_OLS():
-    ticker = request.args.get("ticker",type=str)#add dropdown
-    dependent_variable=request.args.get("dependent",type=str)#add dropdown
-    independent_variable = request.args.get("independent",type=str)#add dropdown
-    missing = request.args.get("missing",type=str)
-    hasconst = request.args.get("hasconst")
-
-    independent_set = API_Interface.data[ticker][independent_variable]
-    dependent_set = API_Interface.data[ticker][dependent_variable]
-
-    obj = Statistics.Regression_Models(dependent_set,independent_set)
-
-    result = obj.Ordinary_least_squares(missing,hasconst)
-
-    return {
-        "payload": "\n\n"+result.as_text(),
-        "error": None
-    }
-
-@app.route("/Run_ClassicLR",methods=['GET'])
-def RunClassicLR():
-    ticker= request.args.get("ticker",type=str)
-    dependent_variable=request.args.get("dependent",type=str)
-    independent_variable = request.args.get("independent",type=str)
-    independent_set = API_Interface.data[ticker][independent_variable]
-    dependent_set = API_Interface.data[ticker][dependent_variable]
-
-    obj = Statistics.Regression_Models(dependent_set,independent_set)
-    result = obj.quick_regression()
-    return {
-        "payload":"\n\n"+str(result),
-        "error":None
-    }
-
-@app.route("/FetchMetric",methods=['GET'])
-def FetchMetric():
-    method = request.args.get("method",type=str)
-    ticker = request.args.get("ticker",type=str)
-    variable = request.args.get("variable",type=str)
-
-    dataset = API_Interface.data[ticker][variable]
-
-    result = metrics_dispatcher[method](dataset)
-
-    return {
-        "payload": result,
-        "error": None
-    }
-
 if __name__=="__main__":
     app.run(debug=True, threaded=True)

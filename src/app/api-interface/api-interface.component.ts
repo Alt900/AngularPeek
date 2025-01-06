@@ -10,15 +10,6 @@ import {provideNativeDateAdapter} from '@angular/material/core';
 import { CommonModule } from '@angular/common';
 import { Utils } from '../utils';
 
-interface DataStructure {
-  close:number;
-  high:number;
-  low:number;
-  open:number
-  timestamp:string;
-  volume:number; 
-}
-
 interface Formatted {
   value:string,
   label:string

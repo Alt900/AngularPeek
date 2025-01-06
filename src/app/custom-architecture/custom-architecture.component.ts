@@ -114,7 +114,7 @@ export class CustomArchitectureComponent {
   async BuildRunArch():Promise<void>{
     this.isTraining=true;
     const ParameterizedRoute:string = `CreateModel?Hyperparams=[${this.HyperparameterValues}]&LayerArgs=${JSON.stringify(this.LayerArgs)}&NormMethod=${this.SelectedMethod}&Ticker=${this.SelectedTicker}&Variables=[${this.SelectedVariables}]`;
-    this.PredictionData = await Utils.FetchRoute(ParameterizedRoute);//pass to candlestick if ohlc in keys predata[0]
+    this.PredictionData = await Utils.FetchRoute(ParameterizedRoute);
     this.isTraining=false;
   }
 

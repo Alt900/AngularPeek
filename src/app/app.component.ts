@@ -9,7 +9,6 @@ import { ColorSketchModule } from 'ngx-color/sketch';
 import { DashboardControlsComponent } from './dashboard-controls/dashboard-controls.component';
 import { CandlestickChartComponent } from './candlestick-chart/candlestick-chart.component';
 import { APIInterfaceComponent } from './api-interface/api-interface.component';
-import { OHLCPredictionComponent } from './ohlc-prediction/ohlc-prediction.component';
 import { CustomArchitectureComponent } from './custom-architecture/custom-architecture.component';
 interface DataStructure {
   close:number;
@@ -18,8 +17,9 @@ interface DataStructure {
   open:number
   timestamp:string;
   volume:number; 
-  colorscheme?:string;
+  colorscheme:string[];
 }
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -28,7 +28,6 @@ interface DataStructure {
     DashboardControlsComponent,
     CandlestickChartComponent,
     APIInterfaceComponent,
-    OHLCPredictionComponent,
     CustomArchitectureComponent,
     
     ColorSketchModule,

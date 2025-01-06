@@ -10,12 +10,6 @@
     *ngIf="ChosenDashboard==='API Interface'"
 />
 
-<app-ohlc-prediction 
-    [TickerData]="CandlestickData"
-    [AvailableTickers]="AvailableTickers"
-    *ngIf="ChosenDashboard==='OHLC prediction'"
-/>
-
 <app-custom-architecture
     [Primary]="Primary_Color"
     [Secondary]="Secondary_Color"

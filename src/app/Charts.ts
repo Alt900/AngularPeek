@@ -1,5 +1,15 @@
 import * as d3 from 'd3';
 
+interface DataStructure {
+  close:number;
+  high:number;
+  low:number;
+  open:number
+  timestamp:string;
+  volume:number; 
+  colorscheme:string[];
+}
+
 export function AccLossPlot(
   SVG:d3.Selection<SVGSVGElement, unknown, null, undefined>, 
   Metric:number[][],
@@ -26,8 +36,8 @@ export function AccLossPlot(
       .domain([Min,Max])
       .rangeRound([H,0]);
 
-  function MouseMoveNavigation(e:any):void{
-    let [x,_] = d3.pointer(e,e.target);
+  function MouseMoveNavigation(e:MouseEvent):void{
+    let [x] = d3.pointer(e,e.target);
     x = Math.round(x);
     SVG.selectAll("#NavigationCircle").remove();
     SVG.selectAll("#NavigationText").remove();
@@ -74,7 +84,7 @@ export function AccLossPlot(
     }
   }
 
-  SVG.on('mousemove',(e:any)=>{MouseMoveNavigation(e)})
+  SVG.on('mousemove',(e:MouseEvent)=>{MouseMoveNavigation(e)})
 
   for(let TTV = 0; TTV <= Variates; TTV++){
       const G = SVG.append("g")
@@ -108,14 +118,14 @@ export function AccLossPlot(
 export function CandleStick(
     X:d3.ScaleBand<string>,
     Y:d3.ScaleLogarithmic<number, number, never>,
-    Data:any,//as datascheme interface 
+    Data:DataStructure[],//as datascheme interface 
     Reference:d3.Selection<SVGSVGElement, unknown, null, undefined>,
     H:number,
     W:number,
     Margin:number[],//0 top 1 bottom 2 right 3 left
     XAxis:string[]
 ):void{
-    const Xgroup = (g: d3.Selection<SVGGElement,unknown,null,undefined>)=>
+    const Xgroup = (g: d3.Selection<SVGGElement,unknown,null,undefined>):void=>{
       g
         .attr("transform",`translate(0,${H-Margin[1]})`)
         .call(d3.axisBottom(X).tickValues(XAxis))
@@ -123,8 +133,8 @@ export function CandleStick(
         .style("font-size","4px")
         .attr("dx","-8em")
         .attr("transform","rotate(-90)")
-        .call((g:any)=>g.select(".domain").remove());
-
+        .call((g:any)=>g.select(".domain").remove());//is selection type but wont accept SVGSVG
+    }
     const Ygroup = (g:d3.Selection<SVGGElement,unknown,null,undefined>)=>
       g
         .attr("transform",`translate(${Margin[3]},0)`)
@@ -166,12 +176,349 @@ export function CandleStick(
         .attr("y2",(d:any)=>Y(d.close))
   }
 
-export function Heatmap(Container:SVGSVGElement):d3.Selection<SVGSVGElement, unknown, null, undefined>{
-    const SVG:d3.Selection<SVGSVGElement, unknown, null, undefined> = d3.select(Container);
-    return SVG
-}
+export function DrawLSTMCell(
+  Reference:d3.Selection<SVGSVGElement, unknown, null, undefined>,
+  Width:number,
+  Height:number,
+):void{
+  const X = d3.scaleLinear().domain(Array.from({length:Width},(_:any,i:number)=>i))
+  const Y = d3.scaleLinear().domain(Array.from({length:Height},(_:any,i:number)=>i))
+  const Group = Reference.append("g").attr("class","LSTM cell");
+  const H = Y(Height);
+  const W = X(Width);
 
-export function Complexity(Container:SVGSVGElement):d3.Selection<SVGSVGElement, unknown, null, undefined>{
-    const SVG:d3.Selection<SVGSVGElement, unknown, null, undefined> = d3.select(Container);
-    return SVG
+  const HWCalc=[H*.9, H*.8, H*.7, W*.15, W*.3, W*.45, W*.6]
+  //H90 = 0
+  //H80 = 1
+  //H70 = 2
+  //W15 = 3
+  //W30 = 4
+  //W45 = 5
+  //W60 = 6
+
+  Group.append("line")
+    .attr("x1",HWCalc[4]+20)
+    .attr("x2",HWCalc[4]+20)
+    .attr("y1",HWCalc[1])
+    .attr("y2",HWCalc[1])
+    .transition()
+      .duration(1000+(1000/HWCalc[4]))
+      .attr("y2",HWCalc[2]);
+  
+  Group.append("line")
+    .attr("x1",HWCalc[4]+20)
+    .attr("x2",HWCalc[4]+20)
+    .attr("y1",HWCalc[2])
+    .attr("y2",HWCalc[2])
+    .transition()
+      .duration(1000+(1000*.3))
+      .attr("x2",HWCalc[5]+20);
+
+  Group.append("line")
+    .attr("x1",HWCalc[5]+20)
+    .attr("x2",HWCalc[5]+20)
+    .attr("y1",HWCalc[1])
+    .attr("y2",HWCalc[1])
+    .transition()
+      .duration(1000+(1000*.45))
+      .attr("y2",HWCalc[2]);
+
+  for(let i = 3; i<7; i++){
+    if(i!=4){//draw dot products
+      const CY = i==3?H*.5:HWCalc[2]
+      Group.append("circle")
+      .attr("cx",HWCalc[i]+20)
+      .attr("cy",CY)
+      .attr("r",0)
+      .transition()
+        .duration(1000)
+        .attr("r",15);
+
+      Group.append("circle")
+      .attr("cx",HWCalc[i]+20)
+      .attr("cy",CY)
+      .attr("r",0)
+      .transition()
+        .duration(2000)
+        .attr("r",5);
+
+
+      Group.append("circle")
+      .attr("cx",HWCalc[i]+20)
+      .attr("cy",CY)
+      .attr("r",0)
+      .transition()
+        .duration(3000)
+        .attr("r",2);
+
+      Group.append("line")
+      .attr("x1",HWCalc[i]+20)
+      .attr("x2",HWCalc[i]+20)
+      .attr("y1",CY)
+      .attr("y2",CY)
+      .transition()
+        .duration(2000)
+        .attr("y2",HWCalc[1]);
+    }
+    Group.append("line")
+    .attr("x1",HWCalc[i]+20)
+    .attr("x2",HWCalc[i]+20)
+    .attr("y1",HWCalc[1])
+    .attr("y2",HWCalc[1])
+    .transition()
+      .duration(1000+(1000/HWCalc[i]))
+      .attr("y2",HWCalc[0]);
+
+    Group.append("rect")
+    .attr("x",HWCalc[i])
+    .attr("y",HWCalc[1])
+    .attr("height",0)
+    .attr("width",0)
+    //
+    .transition()
+      .duration(1000)
+      .attr("width",W*.05)
+      .attr("height",H*.05);
+
+    Group.append("text")
+    .attr("x",HWCalc[i]+10)
+    .attr("y",HWCalc[1]+(H*.05)/2)
+    .attr("dy", ".35em")
+    .attr("dx",".5em")
+    //
+    .text(HWCalc[i]===HWCalc[5]?"Tanh":"σ")
+  }
+
+  Group.append("line")
+    .attr("x1",HWCalc[3]+20)
+    .attr("x2",HWCalc[3]+20)
+    .attr("y1",H*.5)
+    .attr("y2",H*.5)
+    .transition()
+      .duration(1000)
+      .attr("x2",HWCalc[5]+20)
+
+  Group.append("line")
+    .attr("x1",HWCalc[5]+20)
+    .attr("x2",HWCalc[5]+20)
+    .attr("y1",HWCalc[2])
+    .attr("y2",HWCalc[2])
+    .transition()
+      .duration(1000)
+      .attr("y2",H*.5)
+
+  Group.append("rect")
+    .attr("x",HWCalc[6])
+    .attr("y",H*.57)
+    .attr("height",0)
+    .attr("width",0)
+    //
+    .transition()
+      .duration(1000)
+      .attr("width",W*.05)
+      .attr("height",H*.05);
+
+  Group.append("line")
+    .attr("x1",HWCalc[6]+20)
+    .attr("x2",HWCalc[6]+20)
+    .attr("y1",H*.5)
+    .attr("y2",H*.5)
+    .transition()
+      .duration(1000)
+      .attr("y2",H*.57);
+
+  Group.append("line")
+    .attr("x1",HWCalc[6]+20)
+    .attr("x2",HWCalc[6]+20)
+    .attr("y1",HWCalc[2])
+    .attr("y2",HWCalc[2])
+    .transition()
+      .duration(1000)
+      .attr("y2",H*.57);
+
+  Group.append("line")
+    .attr("x1",HWCalc[5]+20)
+    .attr("x2",HWCalc[5]+20)
+    .attr("y1",H*.5)
+    .attr("y2",H*.5)
+    .transition()
+      .duration(1000)
+      .attr("x2",HWCalc[6]+20);
+
+  Group.append("text")
+    .attr("x",HWCalc[6]+((W*.05)/2))
+    .attr("y",H*.57+30)
+    .attr("dx","-1.5em")
+    //
+    .text("Tanh")
+    
+
+  Group.append("line")
+    .attr("x1",HWCalc[3])
+    .attr("y1",HWCalc[0])
+    .attr("y2",HWCalc[0])
+    .attr("x2",HWCalc[3])
+    .transition()
+      .duration(1000+(1000/(HWCalc.length/(4/3))))
+      .attr("x2",HWCalc[6]+20);
+
+  Group.append("circle")
+  .attr("cx",HWCalc[5]+20)
+  .attr("cy",H*.5)
+  .attr("r",0)
+  .transition()
+    .duration(1000)
+    .attr("r",15);
+
+  Group.append("text")
+    .attr("x",HWCalc[5]+15)
+    .attr("y",(H*.5)+5)
+    .attr("dy",".15em")
+    .attr("dx","-.10em")
+    //
+    .style("font-size","30px")
+    .text("+");
+
+    Group.append("rect")
+      .attr("id","EscapeLSTM")
+      .attr("x",W*.7)
+      .attr("y",H*.3)
+      .attr("height",0)
+      .attr("width",0)
+      //
+      .transition()
+        .duration(1000)
+        .attr("width",W*.05)
+        .attr("height",H*.05);
+
+    Group.append("text")
+      .attr("x",W*.7+((W*.05)/2))
+      .attr("y",H*.3+30)
+      .attr("dx","-1.5em")
+      //
+      .text("Exit")
+    //initial cell state
+    Group.append("rect")
+      .attr("x",W*.05)
+      .attr("y",H*.48)
+      .attr("height",0)
+      .attr("width",0)
+      //
+      .transition()
+        .duration(1000)
+        .attr("width",W*.05)
+        .attr("height",H*.05);
+
+    Group.append("text")
+      .attr("x",W*.05+((W*.05)/2))
+      .attr("y",H*.48+30)
+      .attr("dx","-2em")
+      //
+      .text("Cell state")
+
+    Group.append("line")
+      .attr("x1",W*.05+((W*.05)/2))
+      .attr("x2",W*.05+((W*.05)/2))
+      .attr("y1",H*.5)
+      .attr("y2",H*.5)
+      .attr("height",0)
+      .attr("width",0)
+      .transition()
+        .duration(1000)
+        .attr("x2",HWCalc[3]+20)
+
+    //initial hidden state
+    Group.append("rect")
+      .attr("x",W*.05)
+      .attr("y",HWCalc[0]-20)
+      .attr("height",0)
+      .attr("width",0)
+      //
+      .transition()
+        .duration(1000)
+        .attr("width",W*.05)
+        .attr("height",H*.05);
+
+    Group.append("text")
+      .attr("x",W*.05+((W*.05)/2))
+      .attr("y",HWCalc[0]+10)
+      .attr("dx","-3em")
+      .style("font-size","12px")
+      //
+      .text("Hidden state")
+
+    Group.append("line")
+      .attr("x1",W*.05+((W*.05)/2))
+      .attr("x2",W*.05+((W*.05)/2))
+      .attr("y1",HWCalc[0])
+      .attr("y2",HWCalc[0])
+      .attr("height",0)
+      .attr("width",0)
+      .transition()
+        .duration(1000)
+        .attr("x2",HWCalc[3]+20)
+
+    //final cell state
+
+    Group.append("rect")
+      .attr("x",W*.7)
+      .attr("y",H*.5-20)
+      .attr("height",0)
+      .attr("width",0)
+      //
+      .transition()
+        .duration(1000)
+        .attr("width",W*.05)
+        .attr("height",H*.05);
+
+    Group.append("text")
+      .attr("x",W*.7+((W*.05)/2))
+      .attr("y",H*.48+30)
+      .attr("dx","-2em")
+      //
+      .text("Cell state")
+
+    Group.append("line")
+      .attr("x1",HWCalc[6]+20)
+      .attr("x2",HWCalc[6]+20)
+      .attr("y1",H*.5)
+      .attr("y2",H*.5)
+      .attr("height",0)
+      .attr("width",0)
+      .transition()
+        .duration(1000)
+        .attr("x2",W*.7)
+
+
+    //final hidden state
+
+    Group.append("rect")
+      .attr("x",W*.7)
+      .attr("y",HWCalc[0]-20)
+      .attr("height",0)
+      .attr("width",0)
+      //
+      .transition()
+        .duration(1000)
+        .attr("width",W*.05)
+        .attr("height",H*.05);
+
+    Group.append("text")
+      .attr("x",W*.7+((W*.05)/2))
+      .attr("y",HWCalc[0]+10)
+      .attr("dx","-3em")
+      .style("font-size","12px")
+      //
+      .text("Hidden state")
+
+    Group.append("line")
+      .attr("x1",HWCalc[6]+20)
+      .attr("x2",HWCalc[6]+20)
+      .attr("y1",HWCalc[0])
+      .attr("y2",HWCalc[0])
+      .attr("height",0)
+      .attr("width",0)
+      .transition()
+        .duration(1000)
+        .attr("x2",W*.7)
 }

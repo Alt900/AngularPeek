@@ -1,6 +1,6 @@
-from . import pd, os, json, filesystem
+from . import pd, os, filesystem
 from datetime import datetime, timezone
-import requests
+from requests import Session
 
 data={}
 
@@ -10,7 +10,7 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
 }
 
-session = requests.Session()
+session = Session()
 
 class DataHandler():
     def __init__(self):

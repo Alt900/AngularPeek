@@ -17,7 +17,6 @@ export class DashboardControlsComponent {
 
   Selections: string[] = [
     "API Interface",
-    "OHLC prediction",
     "Custom Architecture"
   ]
   //"Custom model architecture"

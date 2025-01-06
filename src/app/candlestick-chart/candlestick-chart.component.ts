@@ -15,7 +15,8 @@ interface DataStructure {
   low:number;
   open:number
   timestamp:string;
-  colorscheme?:string;
+  volume:number; 
+  colorscheme:string[];
 }
 
 @Component({
