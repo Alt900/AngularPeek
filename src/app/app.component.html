@@ -1,33 +1,49 @@
 <router-outlet />
-<!--<app-univariate-chart [UnivariateData]="CandlestickData"/>-->
 <app-api-interface
     (TickerData)="HandleIncomingData($event)"
     [OnHandTickers]="AvailableTickers"
-    *ngIf="ChosenDashboard==='API Interface'"
+    *ngIf="ChosenDashboard==='Data'"
 />
 <app-candlestick-chart
     [Data]="CandlestickData"
-    *ngIf="ChosenDashboard==='API Interface'"
+    *ngIf="ChosenDashboard==='Data'"
 />
 
 <app-custom-architecture
     [Primary]="Primary_Color"
     [Secondary]="Secondary_Color"
     [AvailableTickers]="AvailableTickers"
-    *ngIf="ChosenDashboard==='Custom Architecture'"
+    *ngIf="ChosenDashboard==='Custom Architecture (Prediction)'"
 />
 
-<app-dashboard-controls 
-    (DasboardChangeEvent)="HandleDashboardChange($event)"
-    (ChildBoolean)="HandleInput($event)"
-    [RGBAPrimary]="Primary_Color"
-    [RGBASecondary]="Secondary_Color"
-/>
+<button
+    class="ShowPrimary"
+    (click)="HandleColorBool(1)"
+    [ngClass]="{'ShowPrimaryClicked':ShowPrimary}"
+>⇩</button>
 
-<div *ngIf="ChildBooleanPrimary" class="PrimaryColorContainer">
+<button
+    class="ShowSecondary"
+    (click)="HandleColorBool(2)"
+    [ngClass]="{'ShowSecondaryClicked':ShowSecondary}"
+>⇩</button>
+
+<div *ngIf="ShowPrimary" class="PrimaryColorContainer">
     <color-sketch [color]="Primary_Color" (onChangeComplete)="HandlePrimaryChange($event)"/>
 </div>
 
-<div *ngIf="ChildBooleanSecondary" class="SecondaryColorContainer">
+<div *ngIf="ShowSecondary" class="SecondaryColorContainer">
     <color-sketch [color]="Secondary_Color" (onChangeComplete)="HandleSecondaryChange($event)"/>
+</div>
+
+<div class="DashboardOptions">
+    <button 
+        class="DataDisplay"
+        (click)="ChangeDashboard('Data')"
+    >Data</button>
+
+    <button 
+        class="CustomPrediction"
+        (click)="ChangeDashboard('Custom Architecture (Prediction)')"
+    >Custom Architecture (Prediction)</button>
 </div>

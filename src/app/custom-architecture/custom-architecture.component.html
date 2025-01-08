@@ -16,20 +16,22 @@
         [style.left]="CalculateLeft(i,27)"
     >{{Option}} Plot</button>
 </div>
+
+<div class="LayerControl">
+    <button
+        *ngFor="let option of LayerOptions,let i=index"
+        (click)="AddLayer(option)"
+        [style.top]="CalculateLeft(i,25)"
+        class="LayerOptionButton"
+    >Add {{option}} layer</button>
+</div>
+
 <div class="ArchitectureControl">
-    <div class="LayerControl">
-        <button
-            *ngFor="let option of LayerOptions,let i=index"
-            (click)="AddLayer(option)"
-            [style.left]="CalculateLeft(i,84)"
-            class="LayerOptionButton"
-        >Add {{option}} layer</button>
-    </div>
     <div class="HyperparameterControl">
         <div 
             class="HyperparameterCard"
             *ngFor="let hyperparam of Hyperparameters,let i=index"
-            [style.top]="CalculateLeft(i,50)"
+            [style.top]="CalculateLeft(i,15)"
         >
             <input 
                 class="HyperparameterInput"
@@ -38,38 +40,46 @@
             />
             <h3 class="HyperparameterLabel">{{hyperparam}}</h3>
         </div>
+        <div 
+        class="TickerField"
+        [style.top]="CalculateLeft(Hyperparameters.length,15)"
+        >
+            <mat-form-field style="width:80%">
+                <mat-label>Ticker:</mat-label>
+                <mat-select [(ngModel)]="SelectedTicker">
+                    @for(Ticker of AvailableTickers; track Ticker){
+                        <mat-option [value]="Ticker">{{Ticker}}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+        </div>
+        <div 
+        class="NormalizationField"
+        [style.top]="CalculateLeft(Hyperparameters.length,15)"
+        >
+            <mat-form-field style="width:80%">
+                <mat-label>Norm method:</mat-label>
+                <mat-select [(ngModel)]="SelectedMethod">
+                    @for(Method of NormMethods; track Method){
+                        <mat-option [value]="Method">{{Method}}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+        </div>
+        <div 
+        class="VariablesField"
+        [style.top]="CalculateLeft(Hyperparameters.length+1,15)"
+        >
+            <mat-form-field style="width:80%">
+                <mat-label>Variables:</mat-label>
+                <mat-select [(ngModel)]="SelectedVariables" multiple>
+                    @for(Variable of VariableOptions; track Variable){
+                        <mat-option [value]="Variable">{{Variable}}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+        </div>
     </div>
-    <div class="TickerField">
-        <mat-form-field style="width:80%">
-            <mat-label>Ticker:</mat-label>
-            <mat-select [(ngModel)]="SelectedTicker">
-                @for(Ticker of AvailableTickers; track Ticker){
-                    <mat-option [value]="Ticker">{{Ticker}}</mat-option>
-                }
-            </mat-select>
-        </mat-form-field>
-    </div>
-    <div class="NormalizationField">
-        <mat-form-field style="width:80%">
-            <mat-label>Norm method:</mat-label>
-            <mat-select [(ngModel)]="SelectedMethod">
-                @for(Method of NormMethods; track Method){
-                    <mat-option [value]="Method">{{Method}}</mat-option>
-                }
-            </mat-select>
-        </mat-form-field>
-    </div>
-    <div class="VariablesField">
-        <mat-form-field style="width:80%">
-            <mat-label>Variables:</mat-label>
-            <mat-select [(ngModel)]="SelectedVariables" multiple>
-                @for(Variable of VariableOptions; track Variable){
-                    <mat-option [value]="Variable">{{Variable}}</mat-option>
-                }
-            </mat-select>
-        </mat-form-field>
-    </div>
-
     <button 
         class="ConstructArchitecture"
         (click)="BuildRunArch()"

@@ -1,3 +1,5 @@
+@use './Variables.scss';
+
 .SecondaryColorContainer{
     position: absolute;
     left: 10%;
@@ -17,3 +19,66 @@
     background-color: transparent;
     z-index: 2;
 }
+
+.ShowPrimary{
+    @extend .Border_BackgroundColor_Color;
+    position: absolute;
+    left: 10%;
+    top: 0;
+    width: 2%;
+    height: 5%;
+}
+
+.ShowPrimary:hover{@extend .Inverse_Border_BackgroundColor_Color;}
+
+.ShowPrimaryClicked{@extend .Inverse_Border_BackgroundColor_Color;}
+
+.ShowSecondary{
+    position: absolute;
+    left: 12%;
+    top: 0;
+    width: 2%;
+    height: 5%;
+    border: 2px solid var(--secondary_color);
+    color: var(--secondary_color);
+    background-color: var(--primary_color);
+}
+
+.ShowSecondary:hover{@extend .Inverse_Border_BackgroundColor_Color;}
+
+.ShowSecondaryClicked{
+    color: var(--primary_color);
+    background-color: var(--secondary_color);
+    border: 2px solid var(--primary_color);
+}
+
+.DashboardOptions{
+    position: absolute;
+    @extend .Border_BackgroundTransparent_Color;
+    top: 0;
+    left: 0;
+    width: 10%;
+    height: 7%;
+}
+
+.DataDisplay{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    @extend .Border_BackgroundTransparent_Color;
+}
+
+.DataDisplay:hover{@extend .Inverse_Border_BackgroundColor_Color;}
+
+.CustomPrediction{
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    @extend .Border_BackgroundTransparent_Color;
+}
+
+.CustomPrediction:hover{@extend .Inverse_Border_BackgroundColor_Color;}
