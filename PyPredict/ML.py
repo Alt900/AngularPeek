@@ -1,16 +1,17 @@
-from . import torch,np
+from . import torch,np,pd
     
-def Window(df,Variables,window_size=5):
+def Window(df:pd.DataFrame,Variables:list,window_size:int=5)->np.array:
     Windowed_Set, Labels = [], []
     for i in range(len(df[Variables[0]])-window_size):
         Windowed_Set.append(df[Variables].iloc[i:i+window_size].values)
         Labels.append(df[Variables].iloc[i+window_size].values)
     return np.array(Windowed_Set,dtype=np.float32),np.array(Labels,dtype=np.float32)
 
-def Split(Windows,Labels,ratio):
-    train_end = int(len(Windows)*ratio[0])
-    test_end = train_end + int(len(Windows)*ratio[1])
-    validation_end = test_end + int(len(Windows)*ratio[2])
+def Split(Windows:np.array,Labels:np.array,ratio:tuple)->list:
+    N = len(Windows)
+    train_end = int(N*ratio[0])
+    test_end = train_end + int(N*ratio[1])
+    validation_end = test_end + int(N*ratio[2])
 
     window_train, label_train = Windows[:train_end],Labels[:train_end]
     window_test, label_test = Windows[train_end:test_end],Labels[train_end:test_end]
@@ -24,79 +25,98 @@ class Customized_Network(torch.nn.Module):
         self.LayerArgs = LayerArgs
         self.Variables = Variables
         self.BatchSize = BatchSize
+
         super().__init__()
         self.Layer_Dispatcher = {
-            "LSTM Unidirectional": lambda cellcount,previous : torch.nn.LSTM(
-                input_size=previous,
-                hidden_size=cellcount,
+            "LSTM Unidirectional": lambda Args : torch.nn.LSTM(
+                input_size=Args[0],
+                hidden_size=Args[1],
                 num_layers=1,
-                batch_first=True
+                batch_first=True,
             ),
-            "Dropout":lambda Pval : torch.nn.Dropout(p=Pval),
-            "Dense":lambda cellcount,previous: torch.nn.Linear(
-                in_features=previous,
-                out_features=cellcount
-            )
+            "Dense":lambda Args: torch.nn.Linear(Args[0],Args[1]),
+            "1D Convolution":lambda Args: torch.nn.Conv1d(
+                in_channels=Args[0],
+                out_channels=Args[1],
+                kernel_size=Args[2],
+                stride=Args[3],
+                padding=Args[4]
+            ),
+            "1D Pooling": lambda Args: torch.nn.MaxPool1d(
+                kernel_size=Args[0],
+                stride=Args[1],
+                padding=Args[2]
+            ),
+            "dropout":lambda p: torch.nn.Dropout(p),
+        }
+
+        self.Arg_Dispatcher={
+            "LSTM Unidirectional":lambda I : [
+                len(Variables) if I==0 else self.LayerArgs[I-1]['cell_count'],
+                self.LayerArgs[I]["cell_count"]
+            ],
+            "Dense":lambda I: [
+                self.BatchSize if I==0 else self.LayerArgs[I-1]['cell_count'],
+                self.LayerArgs[I]["cell_count"],
+            ],
+            "1D Convolution": lambda I: [
+                len(Variables) if I==0 else self.LayerArgs[I-1]["cell_count"],
+                self.LayerArgs[I]["filters"],
+                self.LayerArgs[I]["kernel_size"],
+                self.LayerArgs[I]["stride"],
+                self.LayerArgs[I]["padding"]
+            ],
+            "1D Pooling": lambda I: [
+                self.LayerArgs[I]["kernel_size"],
+                self.LayerArgs[I]["stride"],
+                self.LayerArgs[I]["padding"]
+            ]
         }
 
         self.Model_Architecture = []
 
-        for Layer,Index in zip(self.LayerArgs,range(len(self.LayerArgs))):#dim batch size error
-            if Layer == self.LayerArgs[0] and Layer["layer_type"] == "LSTM Unidirectional":
+        for Layer,Index in zip(self.LayerArgs,range(len(self.LayerArgs))):
+
+            #base layer
+            self.Model_Architecture.append(
+                self.Layer_Dispatcher[Layer["layertype"]](
+                    self.Arg_Dispatcher[Layer["layertype"]](Index)
+                )
+            )
+
+            #dropout layer if applicable
+            try: 
+                if Layer["dropout"]>0.00:
+                    self.Model_Architecture.append(self.Layer_Dispatcher["dropout"](Layer["dropout"]))
+            except KeyError:#layer does not have dropout attribute 
+                pass
+
+            #activation layer
+            if Layer["activation"]!="None":
                 self.Model_Architecture.append(
-                    self.Layer_Dispatcher[Layer["layer_type"]](
-                        Layer["cell_count"],
-                        self.BatchSize
-                    )
+                    eval(f"torch.nn.{Layer['activation']}()")
                 )
 
-            elif Layer != self.LayerArgs[0] and Layer != self.LayerArgs[-1]:
-                self.Model_Architecture.append(
-                    self.Layer_Dispatcher[Layer["layer_type"]](
-                        Layer["cell_count"],
-                        self.LayerArgs[Index-1]["cell_count"]
-                    )
-                )
-
-            elif Layer == self.LayerArgs[-1]:
-                self.Model_Architecture.append(
-                    self.Layer_Dispatcher[Layer["layer_type"]](
-                        len(self.Variables),
-                        self.LayerArgs[Index-1]["cell_count"]
-                    )
-                )
-
-            if Layer["dropout"]>0.00:
-                self.Model_Architecture.append(
-                    self.Layer_Dispatcher["Dropout"](
-                        Layer["dropout"]
-                    )
-                )
-                
         self.Model = torch.nn.Sequential(*self.Model_Architecture)
+        
     def forward(self,x):
         out = x
         lstm_states = []
         N = len(self.Model_Architecture)
-        if(N>1):
-            for n in range(1,N):
-                if isinstance(self.Model_Architecture[n],torch.nn.LSTM):
-                    out,h = self.Model_Architecture[n](out)
-                    lstm_states.append(h)
-                else:
-                    out = self.Model_Architecture[n](out)
-            return out[:,-1,:],lstm_states
-        else:
+        for n in range(0,N):
             if isinstance(self.Model_Architecture[n],torch.nn.LSTM):
-                out,h = self.Model_Architecture[0](out)
+                out,h = self.Model_Architecture[n](out)
                 lstm_states.append(h)
-            else:
-                out = self.Model_Architecture[0](out)
-            return out[:,-1,:],lstm_states
+            elif isinstance(self.Model_Architecture[n],torch.nn.Conv1d) or isinstance(self.Model_Architecture[n],torch.nn.MaxPool1d):
+                out = torch.permute(out,(0,2,1))
+                out = self.Model_Architecture[n](out)#1D conv output shape reverts to batch_size,window_size,variables
+            else:#dense
+                out = self.Model_Architecture[n](out)
+        return out[:,-1,:],lstm_states#output prediction same
 
     
 class Custom_Network_Model():
-    def __init__(self,X,Y,batch_size,epochs,learning_rate,Model):
+    def __init__(self,X,Y,batch_size,epochs,learning_rate,optimizer,Model):
         self.batch_size = batch_size
         self.epochs = epochs
         self.learning_rate = learning_rate
@@ -122,7 +142,7 @@ class Custom_Network_Model():
             drop_last=True
         )
 
-        self.Optimizer = torch.optim.Adam(self.Model.parameters(),lr=self.learning_rate)
+        self.Optimizer = eval(f"torch.optim.{optimizer}(self.Model.parameters(),lr=self.learning_rate)")
         self.LossFunction = torch.nn.MSELoss()
 
     def train(self):
@@ -156,74 +176,5 @@ class Custom_Network_Model():
 
     def predict(self,x):
         predicted,_ = self.Model(torch.tensor(x))
-        predicted = predicted.detach().numpy().transpose()
+        predicted = predicted.detach().numpy()
         return predicted
-
-
-class LSTM_OHLC_Multivariate_Model(torch.nn.Module):
-    def __init__(self,cell_count=32,layers = 1):
-        super().__init__()
-        self.layers=layers
-        self.cell_count=cell_count
-        self.LSTM=(torch.nn.LSTM(4,cell_count,layers,batch_first=True))
-        self.dropout=torch.nn.Dropout(p=0.2)
-        self.Dense=torch.nn.Linear(cell_count,4)
-        self.relu = torch.nn.ReLU()
-
-    def forward(self,x):
-        batchsize = x.shape[0]
-        cell_state_1 = torch.zeros(self.layers,batchsize,self.cell_count)
-        hidden_state_1 = torch.zeros(self.layers,batchsize,self.cell_count)
-        LSTM_out,(hidden_state_1,cell_state_1) = self.LSTM(x,(hidden_state_1,cell_state_1))
-        LSTM_out = self.dropout(LSTM_out)
-        LSTM_out = self.relu(LSTM_out)
-        Dense_state = self.Dense(LSTM_out)
-        Dense_state = self.relu(Dense_state)
-        return Dense_state[:,-1,:]
-
-class LSTM_OHLC_Multivariate():
-    def __init__(self,X,Y,cell_count=20,layers=1,batch_size=32,epochs=10,learning_rate=0.01):
-        self.model = LSTM_OHLC_Multivariate_Model(cell_count=cell_count,layers=layers)
-        self.optimizer = torch.optim.Adam(self.model.parameters(),lr=learning_rate)
-        self.LossFunction = torch.nn.MSELoss()
-        self.epochs=epochs
-
-        self.train_x, self.train_y = torch.from_numpy(X[0]), torch.from_numpy(Y[0])
-        self.test_x, self.test_y = torch.from_numpy(X[1]), torch.from_numpy(Y[1])
-
-        self.TrainingLoader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(self.train_x,self.train_y),
-            batch_size=batch_size,
-            shuffle=True,
-            drop_last=True
-        )
-        self.TestingLoader = torch.utils.data.DataLoader(
-            torch.utils.data.TensorDataset(self.test_x,self.test_y),
-            batch_size=batch_size,
-            shuffle=True,
-            drop_last=True
-        )
-
-    def train(self):
-        for epoch in range(self.epochs):
-            for (X_train, Y_train), (X_Test, Y_Test) in zip(self.TrainingLoader,self.TestingLoader):
-                self.model.train()
-                y_predicted = self.model(X_train)
-                loss=self.LossFunction(y_predicted, Y_train)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-            print(f"epoch - {epoch}\nRMSE loss: {loss}")
-            if epoch%100!=0:
-                continue
-            self.model.eval()
-            with torch.no_grad():
-                y_predicted = self.model(X_train)
-                train_rmse=(torch.sqrt(self.LossFunction(y_predicted,Y_train)))
-                y_predicted=self.model(X_Test)
-                test_rmse=(torch.sqrt(self.LossFunction(y_predicted,Y_Test)))
-            print(f"epoch - {epoch}\nTrain RMSE: {train_rmse}\nTest RMSE: {test_rmse}")
-
-    def predict(self,x):
-        predicted=self.model(torch.tensor(x))
-        return predicted.tolist()

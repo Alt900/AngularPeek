@@ -4,11 +4,8 @@ import { RouterOutlet } from '@angular/router';
 import { Utils } from './utils';
 
 import { ColorEvent } from 'ngx-color';
-import { ColorSketchModule } from 'ngx-color/sketch';
 
-import { CandlestickChartComponent } from './candlestick-chart/candlestick-chart.component';
-import { APIInterfaceComponent } from './api-interface/api-interface.component';
-import { CustomArchitectureComponent } from './custom-architecture/custom-architecture.component';
+import { InteractiveArchitectureComponent } from './interactive-architecture/interactive-architecture.component';
 interface DataStructure {
   close:number;
   high:number;
@@ -24,12 +21,7 @@ interface DataStructure {
   standalone: true,
   imports: [
     RouterOutlet,
-    CandlestickChartComponent,
-    APIInterfaceComponent,
-    CustomArchitectureComponent,
-    
-    ColorSketchModule,
-    
+    InteractiveArchitectureComponent,
     CommonModule
   ],
   templateUrl: './app.component.html',
@@ -61,15 +53,15 @@ export class AppComponent {
     this.CandlestickData = payload as DataStructure[];
   }
 
-  ChangeDashboard(ID:string):void{this.ChosenDashboard=ID}
+  ChangeDashboard(ID:string):void{this.ChosenDashboard=ID;console.log(ID)}
 
-  Primary_Color:string = "rgba(0,0,0,1)";
-  Secondary_Color:string = "rgba(0,210,255,1)";
+  Primary_Color:string = "#191919";
+  Secondary_Color:string = "#646464";
 
   ngOnInit():void{
     Utils.FetchRoute("GetTickers")
     .then((Result)=>{
-      this.AvailableTickers=Result;//undefined
+      this.AvailableTickers=Result;
       console.log(this.AvailableTickers)
     })
 

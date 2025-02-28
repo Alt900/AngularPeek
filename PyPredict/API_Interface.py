@@ -1,10 +1,8 @@
-from . import pd, os, filesystem
+from . import pd, os, filesystem,DataDirectory
 from datetime import datetime, timezone
 from requests import Session
 
 data={}
-
-DataDirectory=os.getcwd()+f"{filesystem}MarketData"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
@@ -14,19 +12,28 @@ session = Session()
 
 class DataHandler():
     def __init__(self):
-        self.OnHand = []
         self.HistoricalDataURL = "https://query1.finance.yahoo.com/v8/finance/chart/"
         self.NewsURL = "https://query2.finance.yahoo.com/v1/finance/search?q="
         self.CurrentPriceURL = "https://query1.finance.yahoo.com/v7/finance/quote?"
+        self.OnHand = []
+        self.CheckOnHand()
+
+    def CheckOnHand(self):
         for filename in [x for x in os.walk(DataDirectory)][0][2]:
             self.OnHand.append(filename.split("_")[0])
         
-    def DownloadTickerData(self,tickers,start,end,interval):
+    def DownloadTickerData(self,tickers,start,end,interval,overwrite):
+        self.OnHand = []
+        self.CheckOnHand()
         if(start != None and end != None):
             start = int(datetime.strptime(start,"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
             end = int(datetime.strptime(end,"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
         for ticker in tickers:
-            if ticker not in self.OnHand:
+            if ticker not in self.OnHand or overwrite:
+                
+                if overwrite and ticker in self.OnHand:
+                    os.remove(f"{DataDirectory}{filesystem}{ticker}_data.json")
+
                 self.OnHand.append(ticker)
                 response = session.get(
                     f"{self.HistoricalDataURL}{ticker}?period1={start}&period2={end}&interval={interval}",headers=headers

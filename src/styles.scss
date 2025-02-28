@@ -1,7 +1,10 @@
-
-// Custom Theming for Angular Material
 @use '@angular/material' as mat;
-@use "./app/Variables.scss";
+@use '../m3-theme.scss';
+@include mat.core();
 
-html, body { height: 100%; background-color: var(--primary_color);}
+html {
+  @include mat.all-component-themes(m3-theme.$dark-theme);
+}
+
+html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

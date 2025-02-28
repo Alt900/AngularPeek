@@ -1,3 +1,178 @@
+<!--<link href=".../material-design-icons.css" rel="stylesheet">-->
+
+<div class="LayerParameterAnchor">
+    @for(bool of LayerBooleans; track bool; let i=$index){
+        <div *ngIf="bool" class="LayerParameterCard_draggable" (mousedown)="DraggableMouseDown($event)">
+            <h3 class="LayerParameterLabel">{{LayerArgs[i]['layertype']}} Layer {{i+1}} </h3>
+            <button class="LayerParameterClose" (click)="FlipPopBoolean(i,LayerBooleans)">X</button>    
+            <button mat-button class="RemoveLayer" (click)="RemoveLayer(i)">Remove layer</button>
+            <!--LSTM/Dense parameters-->
+            <ng-container *ngIf="LayerArgs[i]['layertype']==='LSTM Unidirectional' || LayerArgs[i]['layertype']==='Dense'">
+                @for(Parameter of LSTMKeys; track Parameter; let n=$index){
+                    <div class="ParameterInputContainer" [style.top]="CalculateLeft(n+1,35)" [style.width]="100" *ngIf="Parameter!=='layertype'">
+                        <mat-form-field class="ParameterInput" *ngIf="Parameter!=='activation'">
+                            <mat-label>{{Parameter.replaceAll("_"," ")}}:</mat-label>
+                            <input matInput
+                                [value]="LayerArgs[i][Parameter]"
+                                (input)="HandleChanges($event,i,Parameter)"
+                            />
+                        </mat-form-field>
+                        <div 
+                            class="HyperparameterDropdown"
+                            *ngIf="Parameter==='activation'"
+                            [style.top]="CalculateLeft(i+3,10)"
+                        >
+                            <mat-form-field style="width: 200%;">
+                                <mat-label>Activation:</mat-label>
+                                <mat-select [(ngModel)]="LayerArgs[i]['activation']">
+                                    @for(Option of DropdownDispatcher['activation']; track Option){
+                                        <mat-option [value]="Option">{{Option}}</mat-option>
+                                    }
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                    </div>
+                }
+            </ng-container>
+            <!--Convolution parameters-->
+            <ng-container *ngIf="LayerArgs[i]['layertype']==='1D Convolution' || LayerArgs[i]['layertype']==='1D Pooling'">
+                @for(Parameter of CNNKeys; track Parameter; let n=$index){
+                    <ng-container *ngIf="Parameter!=='layertype'">
+                        <mat-form-field *ngIf="Parameter!=='activation'" class="ParameterInputContainer" [style.top]="CalculateLeft(n+1,35)">
+                            <mat-label class="Parameter_Label">{{Parameter.replaceAll("_"," ")}}:</mat-label>
+                            <input matInput
+                                class='HyperparameterInput'
+                                [value]="LayerArgs[i][Parameter]"
+                                (input)="HandleChanges($event,i,Parameter)"
+                            />
+                        </mat-form-field>
+                    </ng-container>
+                    
+                }
+            </ng-container>
+        </div>
+    }
+</div>
+
 <div #ArchContainer class="ArchContainer">
     <svg #ArchSVGContainer></svg>
+</div>
+
+<div class="ArchitectureSettings">
+    <div class="SettingsTabs">
+        <button mat-button class="SettingsTab" (click)="SetSettings('GeneralHyperparameters')" style="left: 0;">Architecture</button>
+        <button mat-button class="SettingsTab" (click)="SetSettings('GraphsTab')" style="left: 30%;">Graphs</button>
+        <button mat-button class="SettingsTab" (click)="SetSettings('DataTab')" style="left: 60%;">Data management</button>
+    </div>
+
+    <div class="SettingsContainer" *ngIf="SelectedSetting==='DataTab'">
+        <div class="TickerControl">
+            <div class="TickerInputContainer">
+                <mat-form-field class="ParameterInputContainer">
+                    <input matInput
+                        [value]="TempTicker"
+                        (input)="SetTempTicker($event)"
+                    >
+                </mat-form-field>
+            </div>
+            <button mat-button class="AddTicker" (click)="AddTicker()">Add</button>
+            <button mat-button class="RemoveTicker" (click)="RemoveTicker()">Remove</button>
+            <div class="TickerListContainer">
+                <mat-list>
+                    <mat-list-item *ngFor="let Ticker of TickersToDownload">{{Ticker}}</mat-list-item>
+                </mat-list>
+            </div>
+        </div>
+        <div class="DownloadControl">
+            <div class="DatePickerContainers" [ngStyle]="{top:0}">
+                <mat-form-field class="FormWidth">
+                    <mat-label>Start date:</mat-label>
+                    <input matInput [matDatepicker]="StartDate" [(ngModel)]="SelectedStartDate"/>
+                    <mat-datepicker-toggle matIconSuffix [for]="StartDate"/>
+                    <mat-datepicker #StartDate/>
+                </mat-form-field>
+            </div>
+            <div class="DatePickerContainers" [ngStyle]="{top:'50%'}">
+                <mat-form-field class="FormWidth">
+                    <mat-label>End date:</mat-label>
+                    <input matInput [matDatepicker]="EndDate" [(ngModel)]="SelectedEndDate"/>
+                    <mat-datepicker-toggle matIconSuffix [for]="EndDate"/>
+                    <mat-datepicker #EndDate/>
+                </mat-form-field>
+            </div>
+            <div class="IntervalField">
+                <mat-form-field class="FormWidth">
+                    <mat-label>Interval:{{SelectedInterval}}</mat-label>
+                    <mat-select [(ngModel)]="SelectedInterval">
+                        @for(option of IntervalOptions; track option){
+                            <mat-option [value]="option['value']">{{option['label']}}</mat-option>
+                        }
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <button mat-button class="DownloadTickers" (click)="DownloadTickers()">Download</button>
+            <mat-checkbox class="OverwriteData" [(ngModel)]="Overwrite">Overwrite pre-existing data</mat-checkbox>
+        </div>
+    </div>
+
+    <div class="SettingsContainer" *ngIf="SelectedSetting==='GraphsTab'">
+        <button mat-button class="GraphOption" (click)="SetGraph('Accuracy')" style="top:0">Accuracy</button>
+        <button mat-button class="GraphOption" (click)="SetGraph('Loss')" style="top:12%">Loss</button>
+        <button mat-button class="GraphOption" (click)="SetGraph('Prediction')" style="top:24%">Prediction</button>
+        <button mat-button class="GraphOption" (click)="SetGraph('SVG')" style="top:36%">SVG</button>
+        <!--Add data -->
+    </div>
+
+    <div class="SettingsContainer" *ngIf="SelectedSetting==='GeneralHyperparameters'">
+        <div class="AddLayerContainer">
+            <button mat-button
+                *ngFor="let option of LayerOptions,let i=index"
+                (click)="AddLayer(option)"
+                [style.left]="CalculateLeft(i,32)"
+                class="AddLayer"
+            >{{option}}</button>
+        </div>
+        @for(hyperparam of HyperparameterKeys; track hyperparam; let i=$index){
+            <div class="HyperparameterCard" [style.left]="0" [style.top]="CalculateLeft(i+4,9)" *ngIf="typeof Hyperparameters[hyperparam] === 'number'">
+                <mat-form-field class="HyperparamInputForm">
+                    <mat-label>{{hyperparam.replaceAll("_"," ")}}</mat-label>
+                    <input matInput
+                        class="HyperparameterInput"
+                        [value]="Hyperparameters[hyperparam]"
+                        (input)="HandleHyperparamChange($event,i)"
+                    />
+                </mat-form-field>
+            </div>
+            <div 
+                class="HyperparameterDropdown" 
+                *ngIf="typeof Hyperparameters[hyperparam] === 'object'"
+                [style.top]="CalculateLeft(i+3,10)"
+            >
+                <mat-form-field style="width: 200%;">
+                    <mat-label>{{hyperparam.replaceAll("_"," ")}}:</mat-label>
+                    <mat-select [(ngModel)]="Hyperparameters[hyperparam]" multiple>
+                        @for(Option of DropdownDispatcher[hyperparam]; track Option){
+                            <mat-option [value]="Option">{{Option.replaceAll("_"," ")}}</mat-option>
+                        }
+                    </mat-select>
+                </mat-form-field>
+            </div>
+
+            <div 
+                class="HyperparameterDropdown"
+                *ngIf="typeof Hyperparameters[hyperparam] === 'string'"
+                [style.top]="CalculateLeft(i+3,10)"
+            >
+                <mat-form-field style="width: 200%;">
+                    <mat-label>{{hyperparam.replaceAll("_"," ")}}:</mat-label>
+                    <mat-select [(ngModel)]="Hyperparameters[hyperparam]">
+                        @for(Option of DropdownDispatcher[hyperparam]; track Option){
+                            <mat-option [value]="Option">{{Option.replaceAll("_"," ")}}</mat-option>
+                        }
+                    </mat-select>
+                </mat-form-field>
+            </div>
+        }
+        <button mat-button class="ConstructArchitecture"(click)="BuildRunArch()">Build and train</button>
+    </div>
 </div>

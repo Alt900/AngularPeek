@@ -1,25 +1,45 @@
 # Peek a browser-based GUI
 ![logo](public/favicon.ico)
 
-## What is the goal of this project?
-This project's end-goal is to be a technical analysis tool for stock analysis using machine learning, statistical methods, and experimental quantum finance algorithms to help traders make well-informed decisions on the stock they are looking to buy/sell. This tool will be able to gather, process, and manipulate stock data for tasks ranging from machine learning / linear regression based forecasting to technical indicators and portfolio optimization. Some future functionalities will include:
+
+Peek is a web-based UI for machine learning predictions on stock data. This project aims to provide a robust interactable toolset for forecasting and analyzing stock data through machine learning and statistical methods. Currently this project supports the following:
 
 
-- LSTM based forecasting
-- VAE based anomaly detection
-- Statistical measurements like mean, mode, standard deviation, ect
-- Technical indicators like MACD
-- Quantum risk management algorithms like QAOA
-- Quantum/Classic machine learning hybrids like QSVM's
-- Fully interactable charts for candlesticks, individual variable analysis, and technical indicators
+#### Layers:
+- LSTM Unidirectional
+- 1D convolution
+- 1D max pooling
+- Linear/Dense
 
 
+#### Hyperparameters:
+- Normalization method
+- Variables being predicted
+- Stock ticker being forecasted
+- Optimization algorithm
+- Batch size
+- Window size
+- Epochs
+- Learning rate
+- Training, testing, and validation split ratio
+- Prediction steps
+- Cell count (any layer)
+- Dropout (LSTM and Linear)
+- Activation function (LSTM and Linear)
+- Kernel size (1D convolution and 1D max pooling)
+- Filters (1D convolution and 1D max pooling)
+- Stride (1D convolution and 1D max pooling)
+- Padding (1D convolution and 1D max pooling)
+- Dilation (1D convolution and 1D max pooling)
 
-
-
+#### Graphs
+- Model accuracy
+- Model loss
+- Model prediction
+- Architecture SVG
 
 ## Prerequisites
-Since this project is built out of Python and Angular using Node and Angular's CLI V19, you are going to need `Python 3.1.5` and `Node.js v22.5.1` installed to continue alongside their respective package managers, pip and npm. There are also external dependencies that need to be installed on both sides:
+Since this project is built out of Python and Angular using Node and Angular CLI V19, you are going to need `Python 3.1.5` and `Node.js v22.5.1` installed to continue alongside their respective package managers, pip and npm. There are also external dependencies that need to be installed on both sides:
 
 
 ### Python:
@@ -37,29 +57,39 @@ cd ./AngularPeek
 npm install
 ```
 ## How do I launch the application?
-If you are Windows there are two batch files called `StartAPI.bat` and `StartApp.bat`, launch them both and when Angular is ready it will pop a new tab with the application. If you are on Linux or MAC the three commands to start the app are `python API.py` and `ng serve`
+If you are Windows there are two batch files called `StartAPI.bat` and `StartApp.bat`, launch them both and when Angular is ready it will pop a new tab with the application. If you are on Linux or MAC the two commands to start the app are `python API.py` and `ng serve`
+
+## Navigation
+There are three buttons at the top right of the UI each taking you to the architecture constructor, available graphs, and data management respectively. 
+
+![Navigation](public/Navigation.png)
+
+## Data management
+On a fresh install there won't be any JSON files containing market data to provide to a custom architecture. So to get started type in the ticker of the stock you want to forecast, click add/remove, and it will be added to / removed from a  que of tickers that will be downloaded. Below you will need to specify a starting and ending date through the two callendars on the bottom left and the type of interval in minutes, hours, days, etc, additionally, optionally, you can select/deselect a checkbox that will replace any pre-existing data for any ticker in the que. 
+
+![FilledDataDownload](public/data_download_filled.png)
 
 
-## Using the API Interface
-This dashboard controls which tickers are downloaded, the date range, and the time interval of the dataset. The only interactable element here is the candlestick chart rendered in the center of the dashboard with X axis scrolling. 
 
 
-## Machine Learning
-There are currently two options for machine learning, the first is a prebuilt LSTM for predicting OHLC prices with a pretty simple layout:
-![OHLC](public/ML_OHLC.png)
-Hyperparameters are laid out below the ticker and normalization method dropdown controlling:
-- epochs
-- batch size
-- window size
-- cell count
-- training, testing, and validaton split ratios
+## Architecture
+Below the navigation tabs there are a few buttons to add layers to your architecture, layers are added sequentially so when clicking a button it will append the chosen layer to the end of the network. Below that there is a column of general hyperparameters controlling everything listed previously above, for layer specific parameters you can click within the box the layer cells are contained in and it will pull up a window containing each respective layer's parameters. Whenever you have created and tuned a network, to make a prediction click the build and train button below the add layer buttons and wait for training to complete. When finished a new loss, accuracy, and prediction plot will become available under the graph tab.
 
-The second option is building a model yourself in the Custom Architecture dashboard. This dashboard has the same set of controllable hyperparameters previously mentioned ontop of buttons sequentially adding LSTM or Dense layers to your architecture:
-![CML1](public/CML_1.png)
-When adding layers, the changes will be reflected in the SVG container at the center of the page populating a LSTM or Dense layer. Alongside the SVG a individual layer controller will be added below the Build and train button allowing you to control Dropout, cell count for the individual layer, and to remove the layer from the architecture:
-![CML2](public/CML_2.png)
-<video src="public/CML_3.mp4" controls></video>
-From here you can alter the machine learning network further and experiment with different combinations or build and train the model. The architecture you constructed will be compiled into a PyTorch model and put through training, to tell when the network is training/done training a asynconous animation will play inverting the colors of the architecture in and out while training: 
-<video src="public/CML4.mp4" controls></video>
-When training is complete you can view the prediction, accuracy, or loss plots:
-<video src="public/CML5.mp4" controls></video>
+
+
+
+### Hybrid network example: 1D convolution -> 1D max pooling -> LSTM -> Dense
+![HybridNetwork1](public/Hybrid1.png)
+
+
+### Considerations
+With any machine learning task the internal details of your architecture changes with the type of problem and data provided. Since the builder only has forecasting capabilities, the problem is going to be forecasting n variables. For forecasting n variables here are a few things to consider when creating a new architecture:
+
+
+- If you have a dense layer make the number of cells (output) equal to the number of variables (if open, high and low are selected the cell count should be 3)
+
+
+- If you have a 1D convolution layer feeding into another 1D convolution or 1D pooling layer then make sure the cell count for the next layer is equal to the output of the previous layer (the featuremap size).
+
+
+- If predictions become flat especially when using standalone LSTM/LSTM-Dense networks it could be due to window size being too small. The network can be treated like a moving average since it has a similar 'moving' effect.
